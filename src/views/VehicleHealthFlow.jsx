@@ -1,26 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, AlertTriangle, CheckCircle, Thermometer, Zap, Wrench, ArrowRight } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle, Thermometer, Zap, Wrench, ArrowRight, Calendar, Clock, DollarSign } from 'lucide-react';
 import { H1, H2, H3, Body, Caption } from '../components/ui/Typography';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import AgentStage from '../components/ui/AgentStage';
 
-// Mock Data
+// --- AGENT 0: SENSOR DATA & ANOMALY DETECTION ---
 const SENSORS = [
     { id: 'temp', label: 'Engine Temp', value: '110°C', unit: 'Normal: 90°C', status: 'error', icon: Thermometer },
     { id: 'vibration', label: 'Vibration', value: 'High', unit: 'Normal: Low', status: 'warning', icon: Activity },
     { id: 'battery', label: 'Battery', value: '12.4V', unit: 'Stable', status: 'success', icon: Zap },
-    // Adding more mock sensors to better demonstrate grid on desktop
     { id: 'oil', label: 'Oil Pressure', value: '45 PSI', unit: 'Normal: 40-50 PSI', status: 'success', icon: Activity },
     { id: 'coolant', label: 'Coolant Level', value: '98%', unit: 'Optimal', status: 'success', icon: Thermometer },
     { id: 'brake', label: 'Brake Pad', value: '85%', unit: 'Good', status: 'success', icon: Wrench },
 ];
 
+// --- AGENT 1: DIAGNOSTICIAN ---
 const DIAGNOSIS = {
     fault: "Engine Misfire",
     cause: "Worn spark plug in Cylinder 4",
     risk: "High",
     rul: "180 km",
+    confidence: "98%"
+};
+
+// --- AGENT 2: SERVICE ADVISOR ---
+const REPAIR_PLAN = {
+    action: "Spark Plug Replacement",
+    parts_cost: '₹800',
+    labor_cost: '₹400',
+    total_cost: '₹1200',
+    estimated_time: '1 hour',
+    notes: "Includes inspection of ignition coils."
+};
+
+// --- AGENT 3: SCHEDULER ---
+const SCHEDULE = {
+    next_slot: "Tuesday, 10:00 AM",
+    location: "Downtown Service Center"
 };
 
 const STEPS = {
@@ -32,15 +50,18 @@ const STEPS = {
 
 const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
     const [step, setStep] = useState(initialState);
-    const [isProcessing, setIsProcessing] = useState(false);
 
-    // Auto-advance for demo purposes if in monitor mode
+    // Independent agent states
+    const [agent1State, setAgent1State] = useState('idle'); // 'idle' | 'processing' | 'complete'
+    const [agent2State, setAgent2State] = useState('idle');
+
+    // Reset loop for demo
     useEffect(() => {
-        if (initialState === STEPS.MONITOR && step === STEPS.MONITOR) {
-            // Just a static view for the "Monitor" state, or interactive? 
-            // Let's keep it interactive but manual for now to let user explore.
+        if (step === STEPS.MONITOR) {
+            setAgent1State('idle');
+            setAgent2State('idle');
         }
-    }, [initialState, step]);
+    }, [step]);
 
     const handleSimulateAnomaly = () => {
         setStep(STEPS.ANOMALY);
@@ -48,9 +69,23 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
 
     const handleRunDiagnosis = () => {
         setStep(STEPS.DIAGNOSIS);
-        setIsProcessing(true);
-        // Simulate AI thinking time
-        setTimeout(() => setIsProcessing(false), 2500);
+
+        // Start Agent 1
+        setAgent1State('processing');
+
+        // Agent 1 Finishes after delay
+        setTimeout(() => {
+            setAgent1State('complete');
+
+            // Start Agent 2 & 3 immediately after Agent 1
+            setAgent2State('processing');
+
+            // Agent 2 & 3 Finish
+            setTimeout(() => {
+                setAgent2State('complete');
+            }, 2500); // 2.5s for Quote/Schedule
+
+        }, 2500); // 2.5s for Diagnosis
     };
 
     const handleApprove = () => {
@@ -63,17 +98,17 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
             {/* Header */}
             <div className="mb-12 flex items-center justify-between">
                 <div>
-                    <Caption className="mb-2 block">Vehicle Health</Caption>
+                    <Caption className="mb-2 block">Vehicle Health System</Caption>
                     <H2 className="text-3xl md:text-4xl">My Model S</H2>
                 </div>
                 <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-secondary-sand border border-functional-stone/30 flex items-center justify-center">
-                    <div className="h-3 w-3 rounded-full bg-functional-success"></div>
+                    <div className="h-3 w-3 rounded-full bg-functional-success shadow-[0_0_10px_#3D8856]"></div>
                 </div>
             </div>
 
             <AnimatePresence mode="wait">
 
-                {/* STEP 1: MONITOR SENSORS */}
+                {/* STEP 1: MONITOR SENSORS (AGENT 0) */}
                 {step === STEPS.MONITOR && (
                     <motion.div
                         key="monitor"
@@ -89,17 +124,17 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                     <div className="p-3 bg-white/20 rounded-xl">
                                         <Activity className="text-white h-6 w-6" />
                                     </div>
-                                    <H3 className="text-white text-2xl md:text-3xl">All Systems Active</H3>
+                                    <H3 className="text-white text-2xl md:text-3xl">System Active</H3>
                                 </div>
-                                <span className="text-white/80 font-medium text-sm md:self-center bg-white/10 px-4 py-2 rounded-full">Real-time Monitoring</span>
+                                <span className="text-white/80 font-medium text-sm md:self-center bg-white/10 px-4 py-2 rounded-full">Real-time Agent Monitoring</span>
                             </div>
                             <div className="text-white/80 text-base md:text-lg max-w-2xl">
-                                Continuous analysis of 142 vehicle sensors. System operating within optimal parameters.
+                                Agent 0 is analyzing 142 vehicle sensors stream for anomalies.
                             </div>
                         </Card>
 
                         <div>
-                            <Caption className="mb-6 block text-lg">Live Metrics</Caption>
+                            <Caption className="mb-6 block text-lg">Live Telemetry</Caption>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {SENSORS.map((sensor) => (
                                     <Card key={sensor.id} className="flex flex-col justify-between p-6 bg-white/50 h-full hover:bg-white transition-colors duration-200">
@@ -125,13 +160,13 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
 
                         <div className="flex justify-center pt-8">
                             <Button onClick={handleSimulateAnomaly} variant="ghost" className="text-base text-functional-stone hover:text-primary-ink">
-                                Simulate Anomaly
+                                Simulate Sensor Anomaly
                             </Button>
                         </div>
                     </motion.div>
                 )}
 
-                {/* STEP 2: ANOMALY DETECTED */}
+                {/* STEP 2: ANOMALY DETECTED (AGENT 0 ALERT) */}
                 {step === STEPS.ANOMALY && (
                     <motion.div
                         key="anomaly"
@@ -150,30 +185,34 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                         <div className="mb-12">
                             <H1 className="mb-4 text-4xl md:text-5xl">Anomaly Detected</H1>
                             <Body variant="serif" className="text-functional-stone text-lg md:text-xl max-w-xl mx-auto leading-relaxed">
-                                Unusual vibration and temperature patterns detected in the engine block core systems.
+                                Agent 0 triggered an alert. Unusual vibration and temperature patterns detected in the engine block.
                             </Body>
                         </div>
 
                         <Card className="text-left border-functional-error/30 bg-functional-error/5 p-8 max-w-xl mx-auto shadow-sm">
                             <H3 className="text-functional-error mb-6 flex items-center gap-2">
                                 <AlertTriangle size={20} />
-                                Alert Summary
+                                Agent 0 Report
                             </H3>
                             <ul className="space-y-4">
                                 <li className="flex justify-between items-center text-base md:text-lg pb-4 border-b border-functional-error/10 last:border-0 last:pb-0">
+                                    <span className="text-functional-stone">Error Code</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg font-mono">P0300</span>
+                                </li>
+                                <li className="flex justify-between items-center text-base md:text-lg pb-4 border-b border-functional-error/10 last:border-0 last:pb-0">
                                     <span className="text-functional-stone">Engine Temp</span>
-                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">110°C (High)</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">110°C</span>
                                 </li>
                                 <li className="flex justify-between items-center text-base md:text-lg">
                                     <span className="text-functional-stone">Vibration</span>
-                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">Level 4 (Critical)</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">Level 4</span>
                                 </li>
                             </ul>
                         </Card>
 
                         <div className="pt-12 flex flex-col md:flex-row gap-4 justify-center items-center">
                             <Button onClick={handleRunDiagnosis} className="w-full md:w-auto px-8 py-3 text-lg h-auto">
-                                Analyze Root Cause
+                                Run Diagnostics (Agent 1)
                             </Button>
                             <Button variant="ghost" onClick={() => setStep(STEPS.MONITOR)} className="w-full md:w-auto text-lg h-auto">
                                 Ignore Alert
@@ -182,103 +221,128 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                     </motion.div>
                 )}
 
-                {/* STEP 3: DIAGNOSIS & PROCESSING */}
+                {/* STEP 3: DIAGNOSIS & PROCESSING (AGENTS 1, 2, 3) */}
                 {step === STEPS.DIAGNOSIS && (
                     <motion.div
                         key="diagnosis"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="h-full flex flex-col"
+                        className="space-y-8 md:space-y-12 max-w-6xl mx-auto w-full min-h-[60vh]"
                     >
-                        {isProcessing ? (
-                            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8 min-h-[50vh]">
-                                <motion.div
-                                    animate={{
-                                        scale: [1, 1.1, 1],
-                                        rotate: [0, 180, 360],
-                                    }}
-                                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                                    className="h-24 w-24 md:h-32 md:w-32 rounded-[2rem] bg-accent-indigo text-white flex items-center justify-center shadow-glow"
-                                >
-                                    <Zap size={48} fill="currentColor" />
-                                </motion.div>
-                                <div>
-                                    <H2 className="text-accent-indigo text-3xl mb-2">Synthesizing...</H2>
-                                    <Body variant="small" className="text-lg">Analyzing sensor history and global service manuals.</Body>
-                                </div>
-                            </div>
-                        ) : (
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="space-y-8 md:space-y-12 max-w-5xl mx-auto w-full"
+                        <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
+
+                            {/* Left Column: Agent 1 (Diagnosis) */}
+                            <AgentStage
+                                status={agent1State}
+                                title="Agent 1: Diagnostician"
+                                icon={Zap}
+                                color="text-accent-indigo"
+                                processingText="Analyzing sensor context..."
                             >
-                                <div className="flex items-center gap-3 text-accent-indigo mb-2 bg-accent-indigo/10 w-fit px-4 py-2 rounded-full">
-                                    <Zap size={20} fill="currentColor" />
-                                    <Caption className="text-accent-indigo font-bold">AI Diagnosis Complete</Caption>
-                                </div>
-
-                                <div className="grid md:grid-cols-2 gap-8 lg:gap-16 items-start">
-                                    {/* Left Column: The Problem */}
-                                    <div className="space-y-6">
-                                        <div>
-                                            <H1 className="text-4xl md:text-5xl mb-4">Engine Misfire</H1>
-                                            <Body className="text-functional-stone text-lg">
-                                                A consistent misfire pattern has been identified in Cylinder 4, correlating with recent high load events.
-                                            </Body>
-                                        </div>
-
-                                        <Card className="bg-white border-accent-indigo/10 shadow-float p-8">
-                                            <div className="mb-6 pb-6 border-b border-functional-mist">
-                                                <Caption className="mb-2 text-functional-stone/70">Root Cause</Caption>
-                                                <Body className="font-bold text-xl md:text-2xl text-primary-ink">{DIAGNOSIS.cause}</Body>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-8">
-                                                <div>
-                                                    <Caption className="mb-2 text-functional-stone/70">Risk Level</Caption>
-                                                    <div className="text-functional-error font-bold font-serif text-3xl">{DIAGNOSIS.risk}</div>
-                                                </div>
-                                                <div>
-                                                    <Caption className="mb-2 text-functional-stone/70">RUL</Caption>
-                                                    <div className="text-primary-clay font-bold font-serif text-3xl">{DIAGNOSIS.rul}</div>
-                                                </div>
-                                            </div>
-                                        </Card>
+                                <div className="space-y-6">
+                                    <div>
+                                        <H1 className="text-4xl md:text-5xl mb-4">{DIAGNOSIS.fault}</H1>
+                                        <Body className="text-functional-stone text-lg">
+                                            Agent 1 analyzed 14 service manuals and sensor history. A specific fault has been identified.
+                                        </Body>
                                     </div>
 
-                                    {/* Right Column: The Solution */}
+                                    <Card className="bg-white border-accent-indigo/10 shadow-float p-8">
+                                        <div className="mb-6 pb-6 border-b border-functional-mist">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <Caption className="text-functional-stone/70">Root Cause</Caption>
+                                                <span className="text-xs font-mono bg-accent-indigo/10 text-accent-indigo px-2 py-1 rounded">Confidence: {DIAGNOSIS.confidence}</span>
+                                            </div>
+                                            <Body className="font-bold text-xl md:text-2xl text-primary-ink">{DIAGNOSIS.cause}</Body>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-8">
+                                            <div>
+                                                <Caption className="mb-2 text-functional-stone/70">Risk Level</Caption>
+                                                <div className="text-functional-error font-bold font-serif text-3xl">{DIAGNOSIS.risk}</div>
+                                            </div>
+                                            <div>
+                                                <Caption className="mb-2 text-functional-stone/70">RUL</Caption>
+                                                <div className="text-primary-clay font-bold font-serif text-3xl">{DIAGNOSIS.rul}</div>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                </div>
+                            </AgentStage>
+
+                            {/* Right Column: Agent 2 (Advisor) & Agent 3 (Scheduler) */}
+                            {/* Only show/process if Agent 1 is complete */}
+                            {agent1State === 'complete' && (
+                                <AgentStage
+                                    status={agent2State}
+                                    title="Agents 2 & 3: Service & Schedule"
+                                    icon={Wrench}
+                                    color="text-primary-clay"
+                                    processingText="Calculating costs & checking schedule..."
+                                >
                                     <div className="space-y-6 md:pt-4">
-                                        <H3 className="text-2xl">Recommendation</H3>
+                                        <H3 className="text-2xl">Recommended Action</H3>
+
+                                        {/* Agent 2: Cost & Repair Plan */}
                                         <Card className="bg-secondary-sand border-0 p-8">
-                                            <div className="flex gap-6">
+                                            <div className="flex gap-6 mb-6">
                                                 <div className="h-14 w-14 shrink-0 rounded-2xl bg-primary-clay flex items-center justify-center text-white shadow-lg shadow-primary-clay/20">
                                                     <Wrench size={28} />
                                                 </div>
                                                 <div>
-                                                    <div className="font-bold text-2xl text-primary-ink mb-2">Replace Spark Plugs</div>
-                                                    <Body className="text-functional-stone mb-6 leading-relaxed">
-                                                        Drive safely to the nearest service center. Avoid highway speeds to prevent further cylinder damage.
+                                                    <div className="font-bold text-2xl text-primary-ink mb-1">{REPAIR_PLAN.action}</div>
+                                                    <Body className="text-functional-stone text-sm">
+                                                        Agent 2 Estimate • {REPAIR_PLAN.estimated_time}
                                                     </Body>
                                                 </div>
                                             </div>
+
+                                            <div className="space-y-3 mb-6 bg-white/50 p-4 rounded-xl border border-white">
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-functional-stone">Parts (Spark Plug Set)</span>
+                                                    <span className="font-medium text-primary-ink">{REPAIR_PLAN.parts_cost}</span>
+                                                </div>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-functional-stone">Labor ({REPAIR_PLAN.estimated_time})</span>
+                                                    <span className="font-medium text-primary-ink">{REPAIR_PLAN.labor_cost}</span>
+                                                </div>
+                                                <div className="border-t border-functional-stone/20 my-2 pt-2 flex justify-between font-bold text-lg">
+                                                    <span>Total Estimate</span>
+                                                    <span>{REPAIR_PLAN.total_cost}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Agent 3: Schedule */}
+                                            <div className="flex gap-4 items-start bg-accent-teal/10 p-4 rounded-xl mb-6">
+                                                <Calendar className="text-accent-teal shrink-0 mt-1" size={20} />
+                                                <div>
+                                                    <div className="font-bold text-accent-teal mb-0.5">Agent 3 Found a Slot</div>
+                                                    <div className="text-primary-ink font-medium">{SCHEDULE.next_slot}</div>
+                                                    <div className="text-xs text-functional-stone mt-1">{SCHEDULE.location}</div>
+                                                </div>
+                                            </div>
+
+                                            <Body className="text-functional-stone text-sm italic">
+                                                "I've checked the price list and mechanic availability. This is the earliest slot." — Service Advisor Agent
+                                            </Body>
                                         </Card>
 
                                         <div className="pt-4 flex flex-col gap-4">
                                             <Button onClick={handleApprove} icon={ArrowRight} className="w-full py-4 text-lg justify-between px-8">
-                                                Schedule Repair
+                                                Approve Repair & Schedule
                                             </Button>
                                             <Button variant="secondary" onClick={() => setStep(STEPS.MONITOR)} className="w-full py-4 text-lg">
-                                                Dismiss
+                                                Decline
                                             </Button>
                                         </div>
                                     </div>
-                                </div>
-                            </motion.div>
-                        )}
+                                </AgentStage>
+                            )}
+
+                        </div>
                     </motion.div>
                 )}
 
-                {/* STEP 4: ACTION CONFIRMED */}
+                {/* STEP 4: ACTION CONFIRMED (HUMAN APPROVED) */}
                 {step === STEPS.ACTION && (
                     <motion.div
                         key="action"
@@ -290,10 +354,35 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                             <CheckCircle size={64} />
                         </div>
                         <div className="max-w-md mx-auto space-y-4">
-                            <H1 className="text-4xl md:text-5xl">All Set</H1>
+                            <H1 className="text-4xl md:text-5xl">Confirmed</H1>
                             <Body className="text-lg text-functional-stone">
-                                Maintenance has been scheduled. A full report has been saved to your vehicle log.
+                                You have approved the repair.
                             </Body>
+                            <Card className="bg-white p-6 mt-6 mx-auto text-left max-w-sm border-functional-stone/20">
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <Calendar className="text-primary-clay" size={20} />
+                                        <div>
+                                            <div className="text-xs text-functional-stone uppercase tracking-wide">Appointment</div>
+                                            <div className="font-bold text-primary-ink">{SCHEDULE.next_slot}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <Wrench className="text-primary-clay" size={20} />
+                                        <div>
+                                            <div className="text-xs text-functional-stone uppercase tracking-wide">Service</div>
+                                            <div className="font-bold text-primary-ink">{REPAIR_PLAN.action}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <DollarSign className="text-primary-clay" size={20} />
+                                        <div>
+                                            <div className="text-xs text-functional-stone uppercase tracking-wide">Est. Cost</div>
+                                            <div className="font-bold text-primary-ink">{REPAIR_PLAN.total_cost}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
                         </div>
                         <Button variant="secondary" className="mt-8 px-8 py-3" onClick={() => setStep(STEPS.MONITOR)}>
                             Return to Dashboard
