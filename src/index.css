@@ -6,12 +6,7 @@
 
 @layer base {
   body {
-    @apply bg-gray-100 text-primary-ink font-sans antialiased;
-    /* Center the phone on desktop */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
+    @apply bg-secondary-sand text-primary-ink font-sans antialiased;
     margin: 0;
   }
 }
