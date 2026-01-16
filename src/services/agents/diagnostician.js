@@ -16,16 +16,27 @@ import { DIAGNOSIS } from '../../constants/mockData';
  * Simulates AI diagnosis process with thinking time
  * @param {Object} sensorData - Current sensor readings
  * @returns {Promise<Object>} Diagnosis result with fault, cause, risk, and RUL
+ * @throws {Error} If diagnosis fails
  */
 export const runDiagnosis = async (sensorData) => {
-    // Simulate AI processing time (RAG retrieval + LLM inference)
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    
-    // In production, this would:
-    // 1. Embed sensor readings and symptoms
-    // 2. Retrieve similar cases from FAISS vector store
-    // 3. Query Ollama LLM with context
-    // 4. Parse and return structured diagnosis
-    
-    return DIAGNOSIS;
+    try {
+        // Validate input
+        if (!sensorData || !Array.isArray(sensorData)) {
+            throw new Error('Invalid sensor data provided');
+        }
+        
+        // Simulate AI processing time (RAG retrieval + LLM inference)
+        await new Promise(resolve => setTimeout(resolve, 2500));
+        
+        // In production, this would:
+        // 1. Embed sensor readings and symptoms
+        // 2. Retrieve similar cases from FAISS vector store
+        // 3. Query Ollama LLM with context
+        // 4. Parse and return structured diagnosis
+        
+        return DIAGNOSIS;
+    } catch (error) {
+        console.error('Diagnosis failed:', error);
+        throw error;
+    }
 };

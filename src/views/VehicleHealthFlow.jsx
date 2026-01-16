@@ -17,7 +17,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, AlertTriangle, CheckCircle, Wrench, ArrowRight } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle, Wrench, ArrowRight, Zap } from 'lucide-react';
 import IPhoneFrame from '../components/layout/IPhoneFrame';
 import { H1, H2, H3, Body, Caption } from '../components/ui/Typography';
 import Card from '../components/ui/Card';
@@ -29,22 +29,31 @@ import { runDiagnosis } from '../services/agents/diagnostician';
 const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
     const [step, setStep] = useState(initialState);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [error, setError] = useState(null);
 
     const handleSimulateAnomaly = () => {
+        setError(null);
         setStep(STEPS.ANOMALY);
     };
 
     const handleRunDiagnosis = async () => {
+        setError(null);
         setStep(STEPS.DIAGNOSIS);
         setIsProcessing(true);
         
-        // Simulate Agent-1 (AI Diagnostician) processing
-        await runDiagnosis(SENSORS);
-        
-        setIsProcessing(false);
+        try {
+            // Simulate Agent-1 (AI Diagnostician) processing
+            await runDiagnosis(SENSORS);
+            setIsProcessing(false);
+        } catch (err) {
+            setError('Diagnosis failed. Please try again.');
+            setIsProcessing(false);
+            console.error('Diagnosis error:', err);
+        }
     };
 
     const handleApprove = () => {
+        setError(null);
         setStep(STEPS.ACTION);
     };
 
@@ -171,7 +180,21 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                             animate={{ opacity: 1 }}
                             className="h-full flex flex-col"
                         >
-                            {isProcessing ? (
+                            {error ? (
+                                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
+                                    <div className="h-20 w-20 rounded-full bg-functional-error/20 flex items-center justify-center text-functional-error">
+                                        <AlertTriangle size={40} />
+                                    </div>
+                                    <H2 className="text-functional-error">Diagnosis Error</H2>
+                                    <Body variant="small" className="text-functional-stone">{error}</Body>
+                                    <Button onClick={handleRunDiagnosis} className="mt-4">
+                                        Try Again
+                                    </Button>
+                                    <Button variant="ghost" onClick={() => setStep(STEPS.ANOMALY)}>
+                                        Back
+                                    </Button>
+                                </div>
+                            ) : isProcessing ? (
                                 <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
                                     <motion.div
                                         animate={{
