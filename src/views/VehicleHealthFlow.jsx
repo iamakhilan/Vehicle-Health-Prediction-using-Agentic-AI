@@ -1,53 +1,47 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * VehicleHealthFlow Component
+ * 
+ * Main workflow component that simulates a multi-agent vehicle health prediction system.
+ * Demonstrates the flow from sensor monitoring through AI diagnosis to service scheduling.
+ * 
+ * Architecture:
+ * - MONITOR: Real-time sensor data visualization
+ * - ANOMALY: Anomaly detection and alerting
+ * - DIAGNOSIS: Agent-1 (AI Diagnostician) analyzes root cause
+ * - ACTION: Agent-2 (Service Advisor) + Agent-3 (Scheduler) coordinate repair
+ * 
+ * Human-in-the-loop approval required before scheduling repairs.
+ * 
+ * @param {string} initialState - Starting step for the flow (defaults to MONITOR)
+ */
+
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, AlertTriangle, CheckCircle, Thermometer, Zap, Wrench, ArrowRight } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle, Wrench, ArrowRight } from 'lucide-react';
 import IPhoneFrame from '../components/layout/IPhoneFrame';
 import { H1, H2, H3, Body, Caption } from '../components/ui/Typography';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-
-// Mock Data
-const SENSORS = [
-    { id: 'temp', label: 'Engine Temp', value: '110°C', unit: 'Normal: 90°C', status: 'error', icon: Thermometer },
-    { id: 'vibration', label: 'Vibration', value: 'High', unit: 'Normal: Low', status: 'warning', icon: Activity },
-    { id: 'battery', label: 'Battery', value: '12.4V', unit: 'Stable', status: 'success', icon: Zap },
-];
-
-const DIAGNOSIS = {
-    fault: "Engine Misfire",
-    cause: "Worn spark plug in Cylinder 4",
-    risk: "High",
-    rul: "180 km",
-};
-
-const STEPS = {
-    MONITOR: 'monitor',
-    ANOMALY: 'anomaly',
-    DIAGNOSIS: 'diagnosis',
-    ACTION: 'action',
-};
+import { SENSORS, DIAGNOSIS } from '../constants/mockData';
+import { STEPS } from '../constants/steps';
+import { runDiagnosis } from '../services/agents/diagnostician';
 
 const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
     const [step, setStep] = useState(initialState);
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // Auto-advance for demo purposes if in monitor mode
-    useEffect(() => {
-        if (initialState === STEPS.MONITOR && step === STEPS.MONITOR) {
-            // Just a static view for the "Monitor" state, or interactive? 
-            // Let's keep it interactive but manual for now to let user explore.
-        }
-    }, [initialState, step]);
-
     const handleSimulateAnomaly = () => {
         setStep(STEPS.ANOMALY);
     };
 
-    const handleRunDiagnosis = () => {
+    const handleRunDiagnosis = async () => {
         setStep(STEPS.DIAGNOSIS);
         setIsProcessing(true);
-        // Simulate AI thinking time
-        setTimeout(() => setIsProcessing(false), 2500);
+        
+        // Simulate Agent-1 (AI Diagnostician) processing
+        await runDiagnosis(SENSORS);
+        
+        setIsProcessing(false);
     };
 
     const handleApprove = () => {
@@ -258,16 +252,35 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                             key="action"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="flex flex-col items-center justify-center h-full text-center space-y-6"
+                            className="space-y-6 text-center pt-8"
                         >
-                            <div className="h-24 w-24 rounded-full bg-functional-success/20 flex items-center justify-center text-functional-success mb-4">
+                            <div className="h-24 w-24 rounded-full bg-functional-success/20 flex items-center justify-center text-functional-success mx-auto mb-4">
                                 <CheckCircle size={48} />
                             </div>
-                            <H1>All Set</H1>
-                            <Body>
-                                Maintenance has been scheduled. A full report has been saved to your vehicle log.
+                            <H1>Repair Scheduled</H1>
+                            <Body className="text-functional-stone">
+                                Your appointment has been confirmed. Service center notified.
                             </Body>
-                            <Button variant="secondary" className="mt-8" onClick={() => setStep(STEPS.MONITOR)}>
+                            
+                            <Card className="text-left bg-secondary-sand border-0">
+                                <Caption className="mb-3 block">Confirmation Details</Caption>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-functional-stone">Service</span>
+                                        <span className="font-semibold text-primary-ink">Replace Spark Plugs</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-functional-stone">Location</span>
+                                        <span className="font-semibold text-primary-ink">Downtown Service Center</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-functional-stone">Est. Duration</span>
+                                        <span className="font-semibold text-primary-ink">1-2 hours</span>
+                                    </div>
+                                </div>
+                            </Card>
+
+                            <Button variant="secondary" className="mt-4" onClick={() => setStep(STEPS.MONITOR)}>
                                 Return to Dashboard
                             </Button>
                         </motion.div>

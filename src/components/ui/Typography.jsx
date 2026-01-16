@@ -1,3 +1,17 @@
+/**
+ * Typography Components
+ * 
+ * Consistent text styling components following design system hierarchy.
+ * Uses custom font families (Merriweather for serif, Nunito for sans-serif).
+ * 
+ * Components:
+ * - H1: Primary headlines (34px serif)
+ * - H2: Section headers (22px sans)
+ * - H3: Subsection headers (17px sans)
+ * - Body: Content text with variants (serif, ui, small)
+ * - Caption: Small labels and metadata (12px uppercase)
+ */
+
 import React from 'react';
 import { cn } from '../../lib/utils';
 

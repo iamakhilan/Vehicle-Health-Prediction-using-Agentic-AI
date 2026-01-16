@@ -1,3 +1,13 @@
+/**
+ * IPhoneFrame Component
+ * 
+ * Simulates an iPhone device frame with notch, status bar, and home indicator.
+ * Provides a realistic mobile preview for the application UI.
+ * 
+ * @param {React.ReactNode} children - Content to display within the phone frame
+ * @param {string} className - Additional CSS classes for the content area
+ */
+
 import React from 'react';
 import { cn } from '../../lib/utils';
 import { Battery, Signal, Wifi } from 'lucide-react';

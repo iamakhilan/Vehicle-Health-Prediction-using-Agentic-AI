@@ -1,3 +1,15 @@
+/**
+ * Button Component
+ * 
+ * Reusable button with multiple variants and animation support.
+ * Includes optional icon support and Framer Motion tap animations.
+ * 
+ * @param {React.ReactNode} children - Button content
+ * @param {string} variant - Style variant: 'primary', 'secondary', or 'ghost'
+ * @param {React.Component} icon - Optional Lucide icon component
+ * @param {string} className - Additional CSS classes
+ */
+
 import React from 'react';
 import { cn } from '../../lib/utils';
 import { motion } from 'framer-motion';
