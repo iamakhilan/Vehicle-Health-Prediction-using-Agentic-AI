@@ -1,3 +1,10 @@
+/**
+ * Typography Components
+ * 
+ * Consistent typography system with semantic HTML elements.
+ * Each component supports custom className and variant overrides.
+ */
+
 import React from 'react';
 import { cn } from '../../lib/utils';
 

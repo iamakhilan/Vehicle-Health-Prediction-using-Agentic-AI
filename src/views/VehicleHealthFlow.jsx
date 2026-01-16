@@ -1,6 +1,28 @@
+/**
+ * Vehicle Health Flow - Main UI Component
+ * 
+ * Orchestrates the multi-agent vehicle health diagnostic system:
+ * 
+ * Flow:
+ * 1. MONITOR: Agent 0 displays real-time sensor telemetry
+ * 2. ANOMALY: Agent 0 detects and alerts on anomalies
+ * 3. DIAGNOSIS: 
+ *    - Agent 1 (AI): Diagnoses issue using RAG + service manual
+ *    - Agent 2 (Rule-based): Estimates repair cost and time
+ *    - Agent 3 (Rule-based): Finds next available service slot
+ * 4. ACTION: Human approves or declines the repair plan
+ * 
+ * Agent Architecture:
+ * - Agent 0: Sensor monitoring (simulated for demo)
+ * - Agent 1: AI-based diagnostician (Ollama + FAISS RAG)
+ * - Agent 2: Rule-based service advisor (deterministic)
+ * - Agent 3: Rule-based scheduler (deterministic)
+ * - Human: Final approval authority
+ */
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, AlertTriangle, CheckCircle, Thermometer, Zap, Wrench, ArrowRight, Calendar, Clock, DollarSign } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle, Thermometer, Zap, Wrench, ArrowRight, Calendar, DollarSign } from 'lucide-react';
 import { H1, H2, H3, Body, Caption } from '../components/ui/Typography';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -49,6 +71,7 @@ const STEPS = {
 
 const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
     const [step, setStep] = useState(initialState);
+    const [errorMessage, setErrorMessage] = useState('');
 
     // Independent agent states
     const [agent1State, setAgent1State] = useState('idle'); // 'idle' | 'processing' | 'complete'
@@ -59,6 +82,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
         if (step === STEPS.MONITOR) {
             setAgent1State('idle');
             setAgent2State('idle');
+            setErrorMessage('');
         }
     }, [step]);
 
@@ -145,10 +169,13 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
             setAgent2State('complete');
         } catch (error) {
             console.error("Diagnosis Failed:", error);
-            // Fallback to mock or error state if needed
+            setErrorMessage('Unable to connect to the API server. Please ensure the backend is running on port 5000.');
+            setAgent1State('idle');
+            setAgent2State('idle');
+            // Keep showing fallback data so UI remains functional
             setDiagnosisResult({
                 ...DIAGNOSIS,
-                cause: "Connection Error: Ensure API is running"
+                cause: "Connection Error - Using fallback data"
             });
         }
 
@@ -296,6 +323,19 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                         animate={{ opacity: 1 }}
                         className="space-y-8 md:space-y-12 max-w-6xl mx-auto w-full min-h-[60vh]"
                     >
+                        {/* Error Banner */}
+                        {errorMessage && (
+                            <Card className="bg-functional-error/10 border-functional-error/30 p-6">
+                                <div className="flex items-start gap-3">
+                                    <AlertTriangle className="text-functional-error shrink-0 mt-1" size={20} />
+                                    <div>
+                                        <div className="font-bold text-functional-error mb-1">Connection Error</div>
+                                        <div className="text-sm text-functional-stone">{errorMessage}</div>
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
+
                         <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
 
                             {/* Left Column: Agent 1 (Diagnosis) */}
@@ -420,9 +460,9 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                             <CheckCircle size={64} />
                         </div>
                         <div className="max-w-md mx-auto space-y-4">
-                            <H1 className="text-4xl md:text-5xl">Confirmed</H1>
+                            <H1 className="text-4xl md:text-5xl">Repair Approved!</H1>
                             <Body className="text-lg text-functional-stone">
-                                You have approved the repair.
+                                Your repair has been scheduled. We've sent a confirmation to your registered contact details.
                             </Body>
                             <Card className="bg-white p-6 mt-6 mx-auto text-left max-w-sm border-functional-stone/20">
                                 <div className="space-y-4">

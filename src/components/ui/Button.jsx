@@ -1,3 +1,15 @@
+/**
+ * Button Component
+ * 
+ * Styled button with motion animation and variant support.
+ * Uses framer-motion for tap feedback.
+ * 
+ * @param {string} variant - 'primary' | 'secondary' | 'ghost'
+ * @param {React.ReactNode} children - Button content
+ * @param {React.ElementType} icon - Optional icon component
+ * @param {string} className - Additional CSS classes
+ */
+
 import React from 'react';
 import { cn } from '../../lib/utils';
 import { motion } from 'framer-motion';
