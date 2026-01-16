@@ -1,3 +1,15 @@
+"""
+Flask API Server for Vehicle Health Prediction System
+
+Exposes three agent endpoints:
+- Agent 1 (POST /diagnose): AI-based diagnostician using RAG + Ollama
+- Agent 2 (POST /estimate): Rule-based service cost estimator  
+- Agent 3 (POST /schedule): Rule-based appointment scheduler
+
+All agents are deterministic except Agent 1, which uses AI only for
+interpreting unstructured manual content.
+"""
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sys
@@ -11,8 +23,27 @@ from agent1_diagnoser import diagnose_to_json
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
 
+# --- AGENT 1: DIAGNOSTICIAN (AI-based with RAG) ---
+
 @app.route('/diagnose', methods=['POST'])
 def run_diagnosis():
+    """Agent 1: Diagnose vehicle issues using AI + service manual.
+    
+    Request body:
+        {"alert": "Error Code P0300 with high engine vibration"}
+    
+    Response:
+        {"diagnosis": {
+            "Diagnosis": "...",
+            "Cause": "...",
+            "Recommended Fix": "...",
+            "Reference": "...",
+            "Confidence": "..."
+        }}
+    
+    Error response:
+        {"error": "error message"}, 400 or 500
+    """
     data = request.json
     alert_text = data.get('alert', '')
     
@@ -29,8 +60,27 @@ def run_diagnosis():
         return jsonify({"error": str(e)}), 500
 
 # --- AGENT 2: SERVICE ADVISOR (Rule-Based) ---
+
 @app.route('/estimate', methods=['POST'])
 def estimate_repair():
+    """Agent 2: Estimate repair cost and time using deterministic rules.
+    
+    Request body:
+        {"diagnosis": "engine misfire", "fix": "replace spark plugs"}
+    
+    Response:
+        {
+            "action": "Ignition Coil & Spark Plug Replacement",
+            "parts": ["Spark Plugs (x4)", "Ignition Coil"],
+            "labor_cost": "₹400",
+            "parts_cost": "₹800",
+            "total_cost": "₹1200",
+            "estimated_time": "1 hour",
+            "notes": "Includes diagnostic scan and test drive."
+        }
+    
+    Falls back to "General Inspection" if no rule matches.
+    """
     data = request.json
     diagnosis = data.get('diagnosis', '').lower()
     fix = data.get('fix', '').lower()
@@ -97,26 +147,35 @@ def estimate_repair():
     return jsonify(estimation)
 
 # --- AGENT 3: SCHEDULER (Rule-Based) ---
+
 from datetime import datetime, timedelta
 
 @app.route('/schedule', methods=['POST'])
 def schedule_service():
-    # Logic: Find next available slot (Mon-Fri, 9am-5pm)
+    """Agent 3: Find next available service slot (deterministic).
+    
+    Logic: Returns next available weekday (Mon-Fri) at 10:00 AM,
+    starting from tomorrow. Skips weekends automatically.
+    
+    Request body:
+        {"duration": "1 hour"} (currently unused, reserved for future)
+    
+    Response:
+        {
+            "location": "Downtown Service Center",
+            "next_slot": "Tuesday, 10:00 AM"
+        }
+    """
     now = datetime.now()
     
-    # Start checking from tomorrow 9 AM if it's already late, or just next hour
-    # For simplicity/stability: Start checking from "tomorrow 10 AM" to simulate realistic scheduling
-    # relative to the current time.
-    
+    # Start from tomorrow at 10 AM
     candidate = now + timedelta(days=1)
-    
-    # Set to 10 AM
     candidate = candidate.replace(hour=10, minute=0, second=0, microsecond=0)
     
     # If candidate is Sat (5) or Sun (6), add days to reach Monday
-    if candidate.weekday() == 5: # Saturday
+    if candidate.weekday() == 5:  # Saturday
         candidate += timedelta(days=2)
-    elif candidate.weekday() == 6: # Sunday
+    elif candidate.weekday() == 6:  # Sunday
         candidate += timedelta(days=1)
         
     formatted_slot = candidate.strftime("%A, %I:%M %p")
@@ -127,6 +186,30 @@ def schedule_service():
     })
 
 
+# --- HEALTH CHECK ENDPOINT ---
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint to verify API is running.
+    
+    Response:
+        {"status": "ok", "service": "Vehicle Health Prediction API"}
+    """
+    return jsonify({
+        "status": "ok",
+        "service": "Vehicle Health Prediction API"
+    })
+
+
 if __name__ == '__main__':
-    print("Starting Agent-1 API on port 5000...")
+    print("=" * 60)
+    print("Vehicle Health Prediction System - API Server")
+    print("=" * 60)
+    print("Agent 1 (Diagnostician): POST /diagnose")
+    print("Agent 2 (Service Advisor): POST /estimate")
+    print("Agent 3 (Scheduler): POST /schedule")
+    print("Health Check: GET /health")
+    print("=" * 60)
+    print("Starting server on http://localhost:5000")
+    print("=" * 60)
     app.run(port=5000, debug=True)

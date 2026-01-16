@@ -1,11 +1,18 @@
 import os
 from langchain_community.document_loaders import PyPDFLoader
 
-# Hardcoded path as per requirements
-PDF_PATH = r"C:\Users\akhil\Music\IOT\Vehicle health prediction\vehicle-health-prediction\data\Corolla E11 Haynes Workshop Manual.pdf"
+# Use relative path to data directory
+PDF_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "Corolla E11 Haynes Workshop Manual.pdf")
 
 def load_manual():
-    """Validates and loads the car manual PDF."""
+    """Validates and loads the car manual PDF.
+    
+    Returns:
+        list: List of document pages, limited to first 10 for performance
+    
+    Raises:
+        FileNotFoundError: If the PDF file doesn't exist
+    """
     if not os.path.exists(PDF_PATH):
         raise FileNotFoundError(f"PDF not found at {PDF_PATH}")
     
@@ -13,7 +20,7 @@ def load_manual():
     loader = PyPDFLoader(PDF_PATH)
     documents = loader.load()
     print(f"Successfully loaded {len(documents)} pages.")
-    # For demo purposes, limit to first 10 pages to speed up embedding on CPU
+    # Limit to first 10 pages to speed up embedding on CPU
     return documents[:10]
 
 if __name__ == "__main__":

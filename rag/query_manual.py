@@ -1,3 +1,10 @@
+"""
+Service Manual Query Module
+
+Loads the FAISS vector index and provides semantic search over 
+the vehicle service manual for Agent 1 (Diagnostician).
+"""
+
 import os
 from langchain_community.vectorstores import FAISS
 from langchain_ollama import OllamaEmbeddings
@@ -5,7 +12,17 @@ from langchain_ollama import OllamaEmbeddings
 INDEX_PATH = os.path.join(os.path.dirname(__file__), "faiss_index")
 
 def get_retriever(k=5):
-    """Loads the FAISS index and returns a retriever."""
+    """Load the FAISS index and return a retriever.
+    
+    Args:
+        k (int): Number of documents to retrieve (default: 5)
+    
+    Returns:
+        Retriever: LangChain retriever for querying the manual
+    
+    Raises:
+        FileNotFoundError: If the index hasn't been built yet
+    """
     if not os.path.exists(INDEX_PATH):
         raise FileNotFoundError(f"Index not found at {INDEX_PATH}. Run build_index.py first.")
         
@@ -15,7 +32,15 @@ def get_retriever(k=5):
     return vector_store.as_retriever(search_kwargs={"k": k})
 
 def query_manual(query_text, k=5):
-    """Retrieves relevant documents for a query."""
+    """Retrieve relevant manual sections for a query.
+    
+    Args:
+        query_text (str): Search query (e.g., "engine misfire P0300")
+        k (int): Number of documents to retrieve (default: 5)
+    
+    Returns:
+        list: List of Document objects with page_content and metadata
+    """
     retriever = get_retriever(k=k)
     docs = retriever.invoke(query_text)
     return docs

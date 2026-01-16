@@ -1,3 +1,10 @@
+"""
+FAISS Index Builder for Vehicle Service Manual
+
+Builds a vector search index from the service manual PDF to enable
+semantic retrieval for Agent 1 (Diagnostician).
+"""
+
 import os
 import sys
 
@@ -12,6 +19,16 @@ from rag.load_pdf import load_manual
 INDEX_PATH = os.path.join(os.path.dirname(__file__), "faiss_index")
 
 def build_index():
+    """Build FAISS vector index from service manual.
+    
+    Process:
+    1. Load PDF pages
+    2. Split into chunks (800 chars with 100 char overlap)
+    3. Generate embeddings using Ollama's nomic-embed-text
+    4. Create and save FAISS index
+    
+    The index is saved to ./faiss_index for later use by query_manual.
+    """
     # 1. Load PDF
     documents = load_manual()
     
@@ -33,7 +50,7 @@ def build_index():
     vector_store = FAISS.from_documents(chunks, embeddings)
     
     # 4. Save Index
-    print(f"Saving IDEX to {INDEX_PATH}...")
+    print(f"Saving INDEX to {INDEX_PATH}...")
     vector_store.save_local(INDEX_PATH)
     print("Index built and saved successfully.")
 

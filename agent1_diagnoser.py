@@ -1,3 +1,15 @@
+"""
+Agent 1: AI-based Vehicle Diagnostician
+
+Uses local RAG (FAISS + Ollama) to diagnose vehicle issues by querying 
+the service manual. Deterministic keyword enrichment improves retrieval accuracy.
+
+Architecture:
+- Query enrichment: Maps error codes to relevant keywords
+- RAG retrieval: Finds relevant manual sections via FAISS
+- LLM diagnosis: Gemma3:1b generates structured diagnosis from context
+"""
+
 import argparse
 import sys
 from rag.query_manual import query_manual
@@ -5,7 +17,17 @@ from langchain_ollama import OllamaLLM
 from langchain_core.prompts import ChatPromptTemplate
 
 def enrich_query(alert_text):
-    """Refines retrieval query using deterministic keyword expansion."""
+    """Refine retrieval query using deterministic keyword expansion.
+    
+    Maps known OBD-II error codes to relevant technical keywords to improve
+    semantic search accuracy.
+    
+    Args:
+        alert_text (str): Raw alert text (e.g., "Error Code P0300")
+    
+    Returns:
+        str: Enriched query with additional keywords
+    """
     enriched = alert_text
     
     # Simple deterministic mapping for demo purposes
@@ -28,7 +50,22 @@ def enrich_query(alert_text):
     return enriched
 
 def diagnose_to_json(alert_text):
-    """Diagnoses and returns a structured dictionary."""
+    """Diagnose vehicle issue and return structured result.
+    
+    Process:
+    1. Enrich query with relevant keywords
+    2. Retrieve manual sections via RAG
+    3. Generate diagnosis using LLM with strict output format
+    4. Parse and return structured dictionary
+    
+    Args:
+        alert_text (str): Vehicle alert or symptom description
+    
+    Returns:
+        dict: Structured diagnosis with keys: Diagnosis, Cause, 
+              Recommended Fix, Reference, Confidence
+              Returns {"error": str} on failure
+    """
     enriched = enrich_query(alert_text)
     
     docs = query_manual(enriched, k=5)
@@ -76,7 +113,14 @@ def diagnose_to_json(alert_text):
         return {"error": str(e)}
 
 def parse_diagnosis_output(text):
-    """Parses text output with 'Key: Value' lines into a dict."""
+    """Parse LLM text output with 'Key: Value' lines into a dictionary.
+    
+    Args:
+        text (str): Multi-line text output from LLM
+    
+    Returns:
+        dict: Parsed diagnosis fields
+    """
     data = {}
     lines = text.split('\n')
     for line in lines:
