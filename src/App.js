@@ -1,3 +1,17 @@
+/**
+ * App Component
+ * 
+ * Main application entry point that displays three workflow states side-by-side
+ * for demonstration purposes. Each state shows a different stage of the vehicle
+ * health prediction system:
+ * 
+ * 1. Monitor - Real-time sensor data display
+ * 2. Anomaly - Alert detection and notification
+ * 3. Diagnosis - AI-powered fault analysis
+ * 
+ * In production, this would be a single flow rather than three parallel instances.
+ */
+
 import React from 'react';
 import VehicleHealthFlow from './views/VehicleHealthFlow';
 

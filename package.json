@@ -1,6 +1,7 @@
 {
   "name": "vehicle-health-prediction",
-  "version": "0.1.0",
+  "version": "2.0.0",
+  "description": "Multi-agent vehicle health monitoring and prediction system with AI-driven diagnostics and human-in-the-loop approval",
   "private": true,
   "dependencies": {
     "@testing-library/dom": "^10.4.1",

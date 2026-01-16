@@ -1,3 +1,10 @@
+/**
+ * Global Styles
+ * 
+ * Imports custom fonts and configures Tailwind CSS.
+ * Uses Merriweather for serif text and Nunito for UI elements.
+ */
+
 @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Nunito:wght@400;600;700&display=swap');
 
 @tailwind base;
@@ -7,11 +14,5 @@
 @layer base {
   body {
     @apply bg-gray-100 text-primary-ink font-sans antialiased;
-    /* Center the phone on desktop */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    margin: 0;
   }
 }
