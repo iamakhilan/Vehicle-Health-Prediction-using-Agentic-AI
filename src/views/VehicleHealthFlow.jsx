@@ -20,9 +20,8 @@ const SENSORS = [
 const DIAGNOSIS = {
     fault: "Engine Misfire",
     cause: "Worn spark plug in Cylinder 4",
-    risk: "High",
-    rul: "180 km",
-    confidence: "98%"
+    fix: "Replace spark plugs",
+    reference: "Page 6"
 };
 
 // --- AGENT 2: SERVICE ADVISOR ---
@@ -67,25 +66,93 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
         setStep(STEPS.ANOMALY);
     };
 
-    const handleRunDiagnosis = () => {
-        setStep(STEPS.DIAGNOSIS);
+    const [diagnosisResult, setDiagnosisResult] = useState(DIAGNOSIS);
+    const [repairPlan, setRepairPlan] = useState(REPAIR_PLAN);
+    const [schedule, setSchedule] = useState(SCHEDULE);
 
-        // Start Agent 1
+    const handleRunDiagnosis = async () => {
+        setStep(STEPS.DIAGNOSIS);
+        // Start Agent 1 (Chained)
         setAgent1State('processing');
 
-        // Agent 1 Finishes after delay
-        setTimeout(() => {
+        try {
+            const response = await fetch('http://localhost:5000/diagnose', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ alert: "Error Code P0300 with high engine vibration" })
+            });
+
+            const data = await response.json();
+
+            let currentFix = "";
+            let currentDiagnosis = "";
+
+            if (data.diagnosis) {
+                // Map API response to UI model
+                const raw = data.diagnosis;
+                currentFix = raw["Recommended Fix"] || "";
+                currentDiagnosis = raw["Diagnosis"] || "";
+
+                setDiagnosisResult({
+                    fault: raw["Diagnosis"] || "Unknown Fault",
+                    cause: raw["Cause"] || "Analysis inconclusive",
+                    fix: raw["Recommended Fix"] || "Check Manual",
+                    reference: raw["Reference"] || "N/A"
+                });
+            }
+
             setAgent1State('complete');
 
-            // Start Agent 2 & 3 immediately after Agent 1
+            // --- AGENT 2: ESTIMATE (Service Advisor) ---
             setAgent2State('processing');
 
-            // Agent 2 & 3 Finish
-            setTimeout(() => {
-                setAgent2State('complete');
-            }, 2500); // 2.5s for Quote/Schedule
+            // Artificial delay for UX
+            await new Promise(r => setTimeout(r, 800));
 
-        }, 2500); // 2.5s for Diagnosis
+            const estResponse = await fetch('http://localhost:5000/estimate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ diagnosis: currentDiagnosis, fix: currentFix })
+            });
+
+            const estData = await estResponse.json();
+            setRepairPlan({
+                action: estData.action,
+                parts_cost: estData.parts_cost,
+                labor_cost: estData.labor_cost,
+                total_cost: estData.total_cost,
+                estimated_time: estData.estimated_time,
+                notes: estData.notes
+            });
+
+            // --- AGENT 3: SCHEDULE (Scheduler) ---
+
+            // Artificial delay for UX
+            await new Promise(r => setTimeout(r, 600));
+
+            const schedResponse = await fetch('http://localhost:5000/schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ duration: estData.estimated_time })
+            });
+
+            const schedData = await schedResponse.json();
+            setSchedule({
+                next_slot: schedData.next_slot,
+                location: schedData.location
+            });
+
+            setAgent2State('complete');
+        } catch (error) {
+            console.error("Diagnosis Failed:", error);
+            // Fallback to mock or error state if needed
+            setDiagnosisResult({
+                ...DIAGNOSIS,
+                cause: "Connection Error: Ensure API is running"
+            });
+        }
+
+
     };
 
     const handleApprove = () => {
@@ -241,28 +308,27 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                             >
                                 <div className="space-y-6">
                                     <div>
-                                        <H1 className="text-4xl md:text-5xl mb-4">{DIAGNOSIS.fault}</H1>
+                                        <H1 className="text-4xl md:text-5xl mb-4">{diagnosisResult.fault}</H1>
                                         <Body className="text-functional-stone text-lg">
-                                            Agent 1 analyzed 14 service manuals and sensor history. A specific fault has been identified.
+                                            Agent 1 analyzed service manuals and sensor context. A specific fault has been identified.
                                         </Body>
                                     </div>
 
                                     <Card className="bg-white border-accent-indigo/10 shadow-float p-8">
                                         <div className="mb-6 pb-6 border-b border-functional-mist">
-                                            <div className="flex justify-between items-center mb-2">
+                                            <div className="mb-2">
                                                 <Caption className="text-functional-stone/70">Root Cause</Caption>
-                                                <span className="text-xs font-mono bg-accent-indigo/10 text-accent-indigo px-2 py-1 rounded">Confidence: {DIAGNOSIS.confidence}</span>
                                             </div>
-                                            <Body className="font-bold text-xl md:text-2xl text-primary-ink">{DIAGNOSIS.cause}</Body>
+                                            <Body className="font-bold text-xl md:text-2xl text-primary-ink">{diagnosisResult.cause}</Body>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-8">
+                                        <div className="space-y-6">
                                             <div>
-                                                <Caption className="mb-2 text-functional-stone/70">Risk Level</Caption>
-                                                <div className="text-functional-error font-bold font-serif text-3xl">{DIAGNOSIS.risk}</div>
+                                                <Caption className="mb-2 text-functional-stone/70">Recommended Fix</Caption>
+                                                <div className="text-primary-ink font-medium text-lg leading-relaxed">{diagnosisResult.fix}</div>
                                             </div>
                                             <div>
-                                                <Caption className="mb-2 text-functional-stone/70">RUL</Caption>
-                                                <div className="text-primary-clay font-bold font-serif text-3xl">{DIAGNOSIS.rul}</div>
+                                                <Caption className="mb-2 text-functional-stone/70">Reference</Caption>
+                                                <div className="text-primary-clay font-bold font-serif text-xl">{diagnosisResult.reference}</div>
                                             </div>
                                         </div>
                                     </Card>
@@ -289,25 +355,25 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                                     <Wrench size={28} />
                                                 </div>
                                                 <div>
-                                                    <div className="font-bold text-2xl text-primary-ink mb-1">{REPAIR_PLAN.action}</div>
+                                                    <div className="font-bold text-2xl text-primary-ink mb-1">{repairPlan.action}</div>
                                                     <Body className="text-functional-stone text-sm">
-                                                        Agent 2 Estimate • {REPAIR_PLAN.estimated_time}
+                                                        Agent 2 Estimate • {repairPlan.estimated_time}
                                                     </Body>
                                                 </div>
                                             </div>
 
                                             <div className="space-y-3 mb-6 bg-white/50 p-4 rounded-xl border border-white">
                                                 <div className="flex justify-between text-sm">
-                                                    <span className="text-functional-stone">Parts (Spark Plug Set)</span>
-                                                    <span className="font-medium text-primary-ink">{REPAIR_PLAN.parts_cost}</span>
+                                                    <span className="text-functional-stone">Parts</span>
+                                                    <span className="font-medium text-primary-ink">{repairPlan.parts_cost}</span>
                                                 </div>
                                                 <div className="flex justify-between text-sm">
-                                                    <span className="text-functional-stone">Labor ({REPAIR_PLAN.estimated_time})</span>
-                                                    <span className="font-medium text-primary-ink">{REPAIR_PLAN.labor_cost}</span>
+                                                    <span className="text-functional-stone">Labor ({repairPlan.estimated_time})</span>
+                                                    <span className="font-medium text-primary-ink">{repairPlan.labor_cost}</span>
                                                 </div>
                                                 <div className="border-t border-functional-stone/20 my-2 pt-2 flex justify-between font-bold text-lg">
                                                     <span>Total Estimate</span>
-                                                    <span>{REPAIR_PLAN.total_cost}</span>
+                                                    <span>{repairPlan.total_cost}</span>
                                                 </div>
                                             </div>
 
@@ -316,8 +382,8 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                                 <Calendar className="text-accent-teal shrink-0 mt-1" size={20} />
                                                 <div>
                                                     <div className="font-bold text-accent-teal mb-0.5">Agent 3 Found a Slot</div>
-                                                    <div className="text-primary-ink font-medium">{SCHEDULE.next_slot}</div>
-                                                    <div className="text-xs text-functional-stone mt-1">{SCHEDULE.location}</div>
+                                                    <div className="text-primary-ink font-medium">{schedule.next_slot}</div>
+                                                    <div className="text-xs text-functional-stone mt-1">{schedule.location}</div>
                                                 </div>
                                             </div>
 
@@ -364,21 +430,21 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                         <Calendar className="text-primary-clay" size={20} />
                                         <div>
                                             <div className="text-xs text-functional-stone uppercase tracking-wide">Appointment</div>
-                                            <div className="font-bold text-primary-ink">{SCHEDULE.next_slot}</div>
+                                            <div className="font-bold text-primary-ink">{schedule.next_slot}</div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <Wrench className="text-primary-clay" size={20} />
                                         <div>
                                             <div className="text-xs text-functional-stone uppercase tracking-wide">Service</div>
-                                            <div className="font-bold text-primary-ink">{REPAIR_PLAN.action}</div>
+                                            <div className="font-bold text-primary-ink">{repairPlan.action}</div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <DollarSign className="text-primary-clay" size={20} />
                                         <div>
                                             <div className="text-xs text-functional-stone uppercase tracking-wide">Est. Cost</div>
-                                            <div className="font-bold text-primary-ink">{REPAIR_PLAN.total_cost}</div>
+                                            <div className="font-bold text-primary-ink">{repairPlan.total_cost}</div>
                                         </div>
                                     </div>
                                 </div>
