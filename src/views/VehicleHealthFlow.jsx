@@ -209,8 +209,10 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                     >
                                         <Zap size={32} fill="currentColor" />
                                     </motion.div>
-                                    <H2 className="text-accent-indigo">Synthesizing...</H2>
-                                    <Body variant="small">Analyzing sensor history and service manuals.</Body>
+                                    <H2 className="text-accent-indigo">Analyzing...</H2>
+                                    <Body variant="small" className="text-functional-stone">
+                                        Agent-1 is diagnosing the issue using AI-powered analysis
+                                    </Body>
                                 </div>
                             ) : (
                                 <motion.div
