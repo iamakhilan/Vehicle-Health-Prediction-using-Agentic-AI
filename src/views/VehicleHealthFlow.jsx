@@ -31,6 +31,9 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState(null);
 
+    // Note: No auto-advance logic needed - user manually triggers each step
+    // initialState determines which step to display on mount
+
     const handleSimulateAnomaly = () => {
         setError(null);
         setStep(STEPS.ANOMALY);
@@ -181,7 +184,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                             className="h-full flex flex-col"
                         >
                             {error ? (
-                                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
+                                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6" role="alert" aria-live="polite">
                                     <div className="h-20 w-20 rounded-full bg-functional-error/20 flex items-center justify-center text-functional-error">
                                         <AlertTriangle size={40} />
                                     </div>

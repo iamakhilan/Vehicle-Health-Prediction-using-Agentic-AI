@@ -21,8 +21,8 @@ import { DIAGNOSIS } from '../../constants/mockData';
 export const runDiagnosis = async (sensorData) => {
     try {
         // Validate input
-        if (!sensorData || !Array.isArray(sensorData)) {
-            throw new Error('Invalid sensor data provided');
+        if (!sensorData || !Array.isArray(sensorData) || sensorData.length === 0) {
+            throw new Error('Sensor data must be a non-empty array of sensor readings');
         }
         
         // Simulate AI processing time (RAG retrieval + LLM inference)
