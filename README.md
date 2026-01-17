@@ -1,141 +1,248 @@
-# Vehicle Health Prediction System
+# Vehicle Health Prediction System v2.0
 
-A production-ready multi-agent system that combines a modern React frontend with a Python backend to diagnose vehicle issues, estimate repair costs, and schedule services. This project leverages **RAG (Retrieval-Augmented Generation)** with local LLMs via **Ollama** to provide accurate, context-aware diagnoses directly from a vehicle workshop manual.
+An intelligent multi-agent system for vehicle diagnostics, repair estimation, and service scheduling. Combines AI-powered diagnostics with deterministic business logic to provide transparent, explainable vehicle health management.
 
-## Features
+## 🎯 System Overview
 
-- **Agent 1: Diagnoser (RAG-based)**
-  - Uses `gemma3:1b` and `nomic-embed-text` to retrieve relevant sections from the *Corolla E11 Haynes Workshop Manual*.
-  - Provides a diagnosis, potential causes, and recommended fixes based strictly on the manual.
-- **Agent 2: Service Advisor (Rule-based)**
-  - estimates repair costs, including parts and labor, based on the diagnosis.
-- **Agent 3: Scheduler (Rule-based)**
-  - Suggests the next available service appointment slot.
-- **Modern Frontend**
-  - Built with **React**, **Tailwind CSS**, and **Framer Motion** for a responsive and animated user experience.
+This system demonstrates a **human-in-the-loop agentic architecture** where:
+- **AI is used only where reasoning over unstructured data is required** (Agent 1: Diagnostician)
+- **Business-critical decisions remain deterministic and explainable** (Agents 2 & 3)
+- **Human approval is the final authority** for all repair actions
 
-## Tech Stack
+### Agent Architecture
+
+#### Agent 0: Sensor Monitor (Simulated)
+- Monitors real-time vehicle telemetry (142 sensors)
+- Detects anomalies in engine temperature, vibration, battery, etc.
+- Triggers alerts when thresholds are exceeded
+
+#### Agent 1: AI Diagnostician 🤖
+- **Type:** AI-based (Local RAG using FAISS + Ollama)
+- **Model:** Gemma3:1b for diagnosis generation
+- **Embeddings:** nomic-embed-text for semantic search
+- **Purpose:** Interprets error codes and symptoms using service manual context
+- **Output:** Structured diagnosis (fault, cause, fix, reference, confidence)
+
+#### Agent 2: Service Advisor 📋
+- **Type:** Rule-based (Deterministic)
+- **Purpose:** Estimates repair cost, parts, labor, and time
+- **Logic:** Keyword matching against predefined repair rules
+- **Fallback:** "General Inspection" when no rule matches
+
+#### Agent 3: Scheduler 📅
+- **Type:** Rule-based (Deterministic)
+- **Purpose:** Finds next available service appointment
+- **Logic:** Returns next weekday (Mon-Fri) at 10:00 AM, skips weekends
+
+#### Human Approval ✅
+- Reviews diagnosis, cost estimate, and schedule
+- Final authority to approve or decline repair
+
+## 🏗️ Technology Stack
+
+### Backend
+- **Python 3.x** - Backend logic
+- **Flask** - REST API server
+- **LangChain** - RAG orchestration
+- **Ollama** - Local LLM inference (Gemma3:1b)
+- **FAISS** - Vector database for semantic search
+- **PyPDF** - Service manual parsing
 
 ### Frontend
-- **React** (Create React App)
-- **Tailwind CSS** (Styling)
-- **Framer Motion** (Animations)
-- **Lucide React** (Icons)
+- **React 19** - UI framework
+- **Framer Motion** - Animations
+- **Tailwind CSS** - Styling
+- **Lucide React** - Icons
 
-### Backend & AI
-- **Python** (Flask API)
-- **LangChain** (Orchestration)
-- **FAISS** (Vector Store for RAG)
-- **Ollama** (Local LLM Runtime)
-- **PyPDF** (PDF Parsing)
+## 📋 Prerequisites
 
-## Prerequisites
+Before running the system, ensure you have:
 
-Before running the project, ensure you have the following installed:
-- **Node.js** (v16+) and **npm**
-- **Python** (v3.8+)
-- **Ollama** (Download from [ollama.com](https://ollama.com))
+1. **Python 3.8+** installed
+2. **Node.js 16+** and npm installed
+3. **Ollama** installed and running locally
+   - Install from: https://ollama.ai
+   - Pull required models:
+     ```bash
+     ollama pull gemma3:1b
+     ollama pull nomic-embed-text
+     ```
+4. Service manual PDF placed in `data/` directory
 
-## Installation & Setup
+## 🚀 Setup & Installation
 
-### 1. Clone the Repository
+### Backend Setup
+
+1. **Install Python dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Build the FAISS index** (one-time setup):
+   ```bash
+   python rag/build_index.py
+   ```
+   This processes the service manual PDF and creates a searchable vector index.
+
+3. **Start the Flask API server:**
+   ```bash
+   python api_server.py
+   ```
+   Server will start on `http://localhost:5000`
+
+### Frontend Setup
+
+1. **Install Node dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Start the React development server:**
+   ```bash
+   npm start
+   ```
+   Application will open at `http://localhost:3000`
+
+## 🔧 API Endpoints
+
+### GET `/health`
+Health check endpoint
+```json
+Response: {"status": "ok", "service": "Vehicle Health Prediction API"}
+```
+
+### POST `/diagnose`
+Agent 1: AI-based diagnosis
+```json
+Request: {"alert": "Error Code P0300 with high engine vibration"}
+Response: {
+  "diagnosis": {
+    "Diagnosis": "Engine Misfire",
+    "Cause": "Worn spark plug in Cylinder 4",
+    "Recommended Fix": "Replace spark plugs",
+    "Reference": "Page 6",
+    "Confidence": "0.85"
+  }
+}
+```
+
+### POST `/estimate`
+Agent 2: Repair cost estimation
+```json
+Request: {"diagnosis": "engine misfire", "fix": "replace spark plugs"}
+Response: {
+  "action": "Ignition Coil & Spark Plug Replacement",
+  "parts": ["Spark Plugs (x4)", "Ignition Coil"],
+  "labor_cost": "₹400",
+  "parts_cost": "₹800",
+  "total_cost": "₹1200",
+  "estimated_time": "1 hour",
+  "notes": "Includes diagnostic scan and test drive."
+}
+```
+
+### POST `/schedule`
+Agent 3: Service scheduling
+```json
+Request: {"duration": "1 hour"}
+Response: {
+  "location": "Downtown Service Center",
+  "next_slot": "Tuesday, 10:00 AM"
+}
+```
+
+## 🎨 User Flow
+
+1. **Monitor Dashboard** - View real-time sensor telemetry
+2. **Anomaly Detection** - System alerts on detected issues
+3. **Run Diagnostics** - Trigger Agent 1 to analyze the problem
+4. **Review Plan** - See diagnosis, cost estimate, and available slots
+5. **Approve/Decline** - Make final decision on proposed repair
+6. **Confirmation** - Receive appointment details
+
+## 📁 Project Structure
+
+```
+├── agent1_diagnoser.py      # Agent 1: AI Diagnostician
+├── api_server.py             # Flask API with all 3 agent endpoints
+├── requirements.txt          # Python dependencies
+├── rag/
+│   ├── build_index.py        # FAISS index builder
+│   ├── load_pdf.py           # PDF loader
+│   └── query_manual.py       # RAG query module
+├── data/
+│   └── Corolla E11 Haynes Workshop Manual.pdf
+├── src/
+│   ├── views/
+│   │   └── VehicleHealthFlow.jsx  # Main UI orchestrator
+│   ├── components/
+│   │   └── ui/               # Reusable UI components
+│   ├── App.js
+│   └── index.js
+└── package.json              # Node.js dependencies
+```
+
+## 🧪 Testing
+
+### Test Backend
 ```bash
-git clone <repository_url>
-cd vehicle-health-prediction
+# Test API health
+curl http://localhost:5000/health
+
+# Test diagnosis endpoint
+curl -X POST http://localhost:5000/diagnose \
+  -H "Content-Type: application/json" \
+  -d '{"alert": "Error Code P0300"}'
 ```
 
-### 2. Setup Backend
+### Test Frontend
+1. Open browser to `http://localhost:3000`
+2. Click "Simulate Sensor Anomaly"
+3. Click "Run Diagnostics"
+4. Verify all agents complete successfully
+5. Test approval flow
 
-It is recommended to use a virtual environment.
+## 🔐 Security & Privacy
 
-```bash
-# Create virtual environment
-python -m venv venv
+- All AI inference runs **locally** using Ollama (no data sent to cloud)
+- Service manual stays on your machine
+- No external API calls for diagnostics
+- Deterministic logic for cost-sensitive decisions
 
-# Activate virtual environment
-# On macOS/Linux:
-source venv/bin/activate
-# On Windows:
-venv\Scripts\activate
+## ⚙️ Configuration
 
-# Install Python dependencies
-pip install -r requirements.txt
+### Customizing Repair Rules (Agent 2)
+Edit the `rules` dictionary in `api_server.py` to add/modify repair estimates:
+```python
+rules = {
+    "keyword": {
+        "action": "Repair Action Name",
+        "parts": ["Part 1", "Part 2"],
+        "labor_cost": "₹XXX",
+        "parts_cost": "₹XXX",
+        "total_cost": "₹XXX",
+        "estimated_time": "X hours",
+        "notes": "Additional information"
+    }
+}
 ```
 
-### 3. Configure Ollama
+### Customizing Service Manual
+1. Replace PDF in `data/` directory
+2. Update path in `rag/load_pdf.py` if needed
+3. Rebuild FAISS index: `python rag/build_index.py`
 
-This project uses local LLMs. You need to pull the specific models used by the agents.
+## 🤝 Contributing
 
-```bash
-# Pull the chat model
-ollama pull gemma3:1b
+This is a demonstration project showcasing agentic AI architecture principles. Contributions that maintain the core design philosophy are welcome.
 
-# Pull the embedding model
-ollama pull nomic-embed-text
+## 📄 License
 
-# Ensure Ollama is running
-ollama serve
-```
+This project is provided as-is for educational and demonstration purposes.
 
-### 4. Build the RAG Index
+## 🙏 Acknowledgments
 
-Before the system can diagnose issues, you need to index the workshop manual.
-
-```bash
-python rag/build_index.py
-```
-*This command processes the PDF in `data/` and saves the FAISS index to `rag/faiss_index/`.*
-
-### 5. Start the Backend API
-
-```bash
-python api_server.py
-```
-The Flask API will start on `http://localhost:5000`.
-
-### 6. Start the Frontend
-
-Open a new terminal window for the frontend.
-
-```bash
-# Install Node modules
-npm install
-
-# Start the React app
-npm start
-```
-The application will open automatically at `http://localhost:3000`.
-
-## Usage
-
-1.  Ensure both the Backend API and Frontend are running.
-2.  On the web interface, describe the vehicle issue (e.g., *"Error code P0300"* or *"Engine is vibrating"*).
-3.  Click **"Run Diagnostics"**.
-4.  The system will:
-    -   **Analyze**: Search the manual and return a diagnosis.
-    -   **Estimate**: Calculate the cost for parts and labor.
-    -   **Schedule**: Propose a time for the repair.
-
-## Project Structure
-
-```
-├── agent1_diagnoser.py  # Logic for the diagnosing agent
-├── api_server.py        # Flask API entry point
-├── data/                # Contains the workshop manual PDF
-├── rag/                 # RAG implementation
-│   ├── build_index.py   # Script to index the PDF
-│   ├── load_pdf.py      # PDF loading utility
-│   ├── query_manual.py  # Logic to query the FAISS index
-│   └── faiss_index/     # Generated vector store (after build)
-├── requirements.txt     # Python dependencies
-├── src/                 # React frontend source code
-└── ...
-```
-
-## Contributing
-
-Contributions are welcome! Please follow standard pull request workflows.
-
-## License
-
-[MIT](LICENSE)
+- Service manual: Haynes Workshop Manual (Toyota Corolla E11)
+- LLM: Gemma3 by Google (via Ollama)
+- Embeddings: nomic-embed-text by Nomic AI
+- UI Framework: React and Tailwind CSS
