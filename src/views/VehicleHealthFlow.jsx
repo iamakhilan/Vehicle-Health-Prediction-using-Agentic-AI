@@ -162,6 +162,14 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
     return (
         <div className="w-full max-w-7xl mx-auto px-6 py-10 md:py-20 lg:px-12 min-h-screen">
 
+            {/* Screen Reader Status Announcement */}
+            <div className="sr-only" role="status" aria-live="polite">
+                {step === STEPS.MONITOR && "System Monitoring Active. All sensors normal."}
+                {step === STEPS.ANOMALY && "Alert: Anomaly Detected. Unusual vibration and temperature patterns detected."}
+                {step === STEPS.DIAGNOSIS && "Diagnosis in progress. Agent 1 is analyzing the fault."}
+                {step === STEPS.ACTION && "Action Confirmed. Repair approved and scheduled."}
+            </div>
+
             {/* Header */}
             <div className="mb-12 flex items-center justify-between">
                 <div>
@@ -189,7 +197,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                             <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6 gap-4">
                                 <div className="flex items-center gap-4">
                                     <div className="p-3 bg-white/20 rounded-xl">
-                                        <Activity className="text-white h-6 w-6" />
+                                        <Activity className="text-white h-6 w-6" aria-hidden="true" />
                                     </div>
                                     <H3 className="text-white text-2xl md:text-3xl">System Active</H3>
                                 </div>
@@ -204,14 +212,19 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                             <Caption className="mb-6 block text-lg">Live Telemetry</Caption>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {SENSORS.map((sensor) => (
-                                    <Card key={sensor.id} className="flex flex-col justify-between p-6 bg-white/50 h-full hover:bg-white transition-colors duration-200">
+                                    <Card
+                                        key={sensor.id}
+                                        className="flex flex-col justify-between p-6 bg-white/50 h-full hover:bg-white transition-colors duration-200"
+                                        aria-label={`${sensor.label}: ${sensor.value}. Reference: ${sensor.unit}. Status: ${sensor.status}`}
+                                        tabIndex={0}
+                                    >
                                         <div className="flex justify-between items-start mb-4">
                                             <div className="flex items-center gap-3">
                                                 <div className={`p-2.5 rounded-xl ${sensor.status === 'error' ? 'bg-functional-error/10 text-functional-error' :
                                                     sensor.status === 'warning' ? 'bg-accent-teal/10 text-accent-teal' :
                                                         'bg-functional-success/10 text-functional-success'
                                                     }`}>
-                                                    <sensor.icon size={22} />
+                                                    <sensor.icon size={22} aria-hidden="true" />
                                                 </div>
                                                 <div>
                                                     <div className="font-semibold text-primary-ink text-lg">{sensor.label}</div>
@@ -241,11 +254,13 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 1.02 }}
                         className="max-w-3xl mx-auto text-center pt-10 md:pt-20"
+                        role="alert"
+                        aria-live="assertive"
                     >
                         <div className="relative inline-block mb-8">
                             <div className="absolute inset-0 bg-functional-error/20 rounded-full animate-ping duration-1000"></div>
                             <div className="relative p-8 bg-functional-error/10 rounded-full text-functional-error">
-                                <AlertTriangle size={64} strokeWidth={1.5} />
+                                <AlertTriangle size={64} strokeWidth={1.5} aria-hidden="true" />
                             </div>
                         </div>
 
@@ -258,7 +273,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
 
                         <Card className="text-left border-functional-error/30 bg-functional-error/5 p-8 max-w-xl mx-auto shadow-sm">
                             <H3 className="text-functional-error mb-6 flex items-center gap-2">
-                                <AlertTriangle size={20} />
+                                <AlertTriangle size={20} aria-hidden="true" />
                                 Agent 0 Report
                             </H3>
                             <ul className="space-y-4">
@@ -278,7 +293,12 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                         </Card>
 
                         <div className="pt-12 flex flex-col md:flex-row gap-4 justify-center items-center">
-                            <Button onClick={handleRunDiagnosis} className="w-full md:w-auto px-8 py-3 text-lg h-auto">
+                            <Button
+                                onClick={handleRunDiagnosis}
+                                className="w-full md:w-auto px-8 py-3 text-lg h-auto"
+                                isLoading={agent1State === 'processing'}
+                                disabled={agent1State === 'processing'}
+                            >
                                 Run Diagnostics (Agent 1)
                             </Button>
                             <Button variant="ghost" onClick={() => setStep(STEPS.MONITOR)} className="w-full md:w-auto text-lg h-auto">
