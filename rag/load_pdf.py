@@ -1,8 +1,9 @@
 import os
 from langchain_community.document_loaders import PyPDFLoader
 
-# Hardcoded path as per requirements
-PDF_PATH = r"C:\Users\akhil\Music\IOT\Vehicle health prediction\vehicle-health-prediction\data\Corolla E11 Haynes Workshop Manual.pdf"
+# Get the base directory (root of the project)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PDF_PATH = os.path.join(BASE_DIR, "data", "Corolla E11 Haynes Workshop Manual.pdf")
 
 def load_manual():
     """Validates and loads the car manual PDF."""

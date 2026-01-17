@@ -1,70 +1,141 @@
-# Getting Started with Create React App
+# Vehicle Health Prediction System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A production-ready multi-agent system that combines a modern React frontend with a Python backend to diagnose vehicle issues, estimate repair costs, and schedule services. This project leverages **RAG (Retrieval-Augmented Generation)** with local LLMs via **Ollama** to provide accurate, context-aware diagnoses directly from a vehicle workshop manual.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **Agent 1: Diagnoser (RAG-based)**
+  - Uses `gemma3:1b` and `nomic-embed-text` to retrieve relevant sections from the *Corolla E11 Haynes Workshop Manual*.
+  - Provides a diagnosis, potential causes, and recommended fixes based strictly on the manual.
+- **Agent 2: Service Advisor (Rule-based)**
+  - estimates repair costs, including parts and labor, based on the diagnosis.
+- **Agent 3: Scheduler (Rule-based)**
+  - Suggests the next available service appointment slot.
+- **Modern Frontend**
+  - Built with **React**, **Tailwind CSS**, and **Framer Motion** for a responsive and animated user experience.
 
-### `npm start`
+## Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Frontend
+- **React** (Create React App)
+- **Tailwind CSS** (Styling)
+- **Framer Motion** (Animations)
+- **Lucide React** (Icons)
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### Backend & AI
+- **Python** (Flask API)
+- **LangChain** (Orchestration)
+- **FAISS** (Vector Store for RAG)
+- **Ollama** (Local LLM Runtime)
+- **PyPDF** (PDF Parsing)
 
-### `npm test`
+## Prerequisites
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Before running the project, ensure you have the following installed:
+- **Node.js** (v16+) and **npm**
+- **Python** (v3.8+)
+- **Ollama** (Download from [ollama.com](https://ollama.com))
 
-### `npm run build`
+## Installation & Setup
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 1. Clone the Repository
+```bash
+git clone <repository_url>
+cd vehicle-health-prediction
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 2. Setup Backend
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+It is recommended to use a virtual environment.
 
-### `npm run eject`
+```bash
+# Create virtual environment
+python -m venv venv
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+# Activate virtual environment
+# On macOS/Linux:
+source venv/bin/activate
+# On Windows:
+venv\Scripts\activate
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# Install Python dependencies
+pip install -r requirements.txt
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### 3. Configure Ollama
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+This project uses local LLMs. You need to pull the specific models used by the agents.
 
-## Learn More
+```bash
+# Pull the chat model
+ollama pull gemma3:1b
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+# Pull the embedding model
+ollama pull nomic-embed-text
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+# Ensure Ollama is running
+ollama serve
+```
 
-### Code Splitting
+### 4. Build the RAG Index
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+Before the system can diagnose issues, you need to index the workshop manual.
 
-### Analyzing the Bundle Size
+```bash
+python rag/build_index.py
+```
+*This command processes the PDF in `data/` and saves the FAISS index to `rag/faiss_index/`.*
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### 5. Start the Backend API
 
-### Making a Progressive Web App
+```bash
+python api_server.py
+```
+The Flask API will start on `http://localhost:5000`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### 6. Start the Frontend
 
-### Advanced Configuration
+Open a new terminal window for the frontend.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+```bash
+# Install Node modules
+npm install
 
-### Deployment
+# Start the React app
+npm start
+```
+The application will open automatically at `http://localhost:3000`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## Usage
 
-### `npm run build` fails to minify
+1.  Ensure both the Backend API and Frontend are running.
+2.  On the web interface, describe the vehicle issue (e.g., *"Error code P0300"* or *"Engine is vibrating"*).
+3.  Click **"Run Diagnostics"**.
+4.  The system will:
+    -   **Analyze**: Search the manual and return a diagnosis.
+    -   **Estimate**: Calculate the cost for parts and labor.
+    -   **Schedule**: Propose a time for the repair.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Project Structure
+
+```
+├── agent1_diagnoser.py  # Logic for the diagnosing agent
+├── api_server.py        # Flask API entry point
+├── data/                # Contains the workshop manual PDF
+├── rag/                 # RAG implementation
+│   ├── build_index.py   # Script to index the PDF
+│   ├── load_pdf.py      # PDF loading utility
+│   ├── query_manual.py  # Logic to query the FAISS index
+│   └── faiss_index/     # Generated vector store (after build)
+├── requirements.txt     # Python dependencies
+├── src/                 # React frontend source code
+└── ...
+```
+
+## Contributing
+
+Contributions are welcome! Please follow standard pull request workflows.
+
+## License
+
+[MIT](LICENSE)
