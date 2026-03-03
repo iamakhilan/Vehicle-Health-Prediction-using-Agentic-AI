@@ -7,6 +7,9 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from agent1_diagnoser import diagnose_to_json
+import feature_engineering
+import health_model
+import explanation_engine
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
@@ -127,6 +130,37 @@ def schedule_service():
     })
 
 
+# --- NEW: CONDITION-BASED PREDICTION API ---
+@app.route('/predict', methods=['POST'])
+def predict_health():
+    data = request.json or {}
+    
+    vehicle_id = data.get('vehicle_id', 'car1')
+    engine_runtime = float(data.get('engine_runtime', 60.0))
+    
+    # Feature Engineering
+    norm_features = feature_engineering.normalize_features(data)
+    
+    # Models
+    stress_index = health_model.calculate_stress_index(norm_features)
+    health_score = health_model.process_vehicle_health(vehicle_id, stress_index, engine_runtime)
+    trend = health_model.analyze_trend(vehicle_id)
+    remaining_km = health_model.estimate_remaining_distance(vehicle_id, health_score)
+    risk_level = health_model.determine_risk_level(health_score)
+    
+    # Explanation
+    primary_stress_factors = explanation_engine.generate_explanations(norm_features)
+    
+    return jsonify({
+        "vehicle_id": vehicle_id,
+        "health_score": round(health_score, 1),
+        "remaining_km": remaining_km,
+        "risk_level": risk_level,
+        "trend": trend,
+        "primary_stress_factors": primary_stress_factors,
+        "stress_index": round(stress_index, 3)
+    })
+
 if __name__ == '__main__':
-    print("Starting Agent-1 API on port 5000...")
+    print("Starting Main API Server on port 5000...")
     app.run(port=5000, debug=True)

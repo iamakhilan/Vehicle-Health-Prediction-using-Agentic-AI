@@ -16,12 +16,14 @@ const SENSORS = [
     { id: 'brake', label: 'Brake Pad', value: '85%', unit: 'Good', status: 'success', icon: Wrench },
 ];
 
-// --- AGENT 1: DIAGNOSTICIAN ---
+// --- AGENT 1: DIAGNOSTICIAN (Upgraded to Predictor v3) ---
 const DIAGNOSIS = {
-    fault: "Engine Misfire",
-    cause: "Worn spark plug in Cylinder 4",
-    fix: "Replace spark plugs",
-    reference: "Page 6"
+    health_score: 100,
+    remaining_km: 10000,
+    risk_level: "Low",
+    trend: "stable",
+    primary_stress_factors: [],
+    stress_index: 0
 };
 
 // --- AGENT 2: SERVICE ADVISOR ---
@@ -76,28 +78,34 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
         setAgent1State('processing');
 
         try {
-            const response = await fetch('http://localhost:5000/diagnose', {
+            const response = await fetch('http://localhost:5000/predict', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ alert: "Error Code P0300 with high engine vibration" })
+                body: JSON.stringify({
+                    vehicle_id: "demo_car_01",
+                    engine_runtime: 60,
+                    rpm: 4500,
+                    engine_load: 85,
+                    coolant_temp: 110,
+                    throttle_pos: 70,
+                    fuel_trim: 18,
+                    dtc_flag: true
+                })
             });
 
             const data = await response.json();
 
-            let currentFix = "";
-            let currentDiagnosis = "";
+            let currentFix = "General Inspection";
+            let currentDiagnosis = "Telemetry Anomaly";
 
-            if (data.diagnosis) {
-                // Map API response to UI model
-                const raw = data.diagnosis;
-                currentFix = raw["Recommended Fix"] || "";
-                currentDiagnosis = raw["Diagnosis"] || "";
-
+            if (data) {
                 setDiagnosisResult({
-                    fault: raw["Diagnosis"] || "Unknown Fault",
-                    cause: raw["Cause"] || "Analysis inconclusive",
-                    fix: raw["Recommended Fix"] || "Check Manual",
-                    reference: raw["Reference"] || "N/A"
+                    health_score: data.health_score || 0,
+                    remaining_km: data.remaining_km || 0,
+                    risk_level: data.risk_level || "Unknown",
+                    trend: data.trend || "stable",
+                    primary_stress_factors: data.primary_stress_factors || [],
+                    stress_index: data.stress_index || 0
                 });
             }
 
@@ -308,28 +316,53 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                             >
                                 <div className="space-y-6">
                                     <div>
-                                        <H1 className="text-4xl md:text-5xl mb-4">{diagnosisResult.fault}</H1>
+                                        <H1 className="text-4xl md:text-5xl mb-4 text-primary-ink">Health: <span className={diagnosisResult.risk_level === 'High' ? 'text-functional-error' : 'text-accent-teal'}>{diagnosisResult.health_score}%</span></H1>
                                         <Body className="text-functional-stone text-lg">
-                                            Agent 1 analyzed service manuals and sensor context. A specific fault has been identified.
+                                            Prediction based on live vehicle telemetry.
                                         </Body>
+                                        <div className={`mt-4 mb-2 font-bold px-4 py-2 rounded-lg inline-block ${diagnosisResult.risk_level === 'High' ? 'bg-functional-error/20 text-functional-error' :
+                                            diagnosisResult.risk_level === 'Medium' ? 'bg-accent-teal/20 text-accent-teal' :
+                                                'bg-functional-success/20 text-functional-success'
+                                            }`}>
+                                            Risk Badge: {diagnosisResult.risk_level}
+                                        </div>
+                                        {diagnosisResult.risk_level === 'High' && (
+                                            <div className="mt-2 p-4 bg-functional-error/10 border-l-4 border-functional-error text-functional-error text-lg font-bold">
+                                                Warning: Critical vehicle health degradation detected. Immediate service advised.
+                                            </div>
+                                        )}
+                                        <div className="mt-6">
+                                            <div className="text-2xl font-bold mb-4 text-primary-ink">Remaining Safe Distance: <span className="text-accent-indigo">{diagnosisResult.remaining_km} KM</span></div>
+                                        </div>
+                                        <div className="mt-4 p-4 border-2 border-solid border-functional-stone/30 rounded-xl bg-white/50 flex flex-col items-center">
+                                            <div className="text-sm text-functional-stone uppercase tracking-wide mb-2">Trend Analysis</div>
+                                            <div className="flex items-center gap-3">
+                                                {diagnosisResult.trend === 'deteriorating' ? (
+                                                    <div className="text-functional-error flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Deteriorating (↘)</div>
+                                                ) : diagnosisResult.trend === 'improving' ? (
+                                                    <div className="text-functional-success flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Improving (↗)</div>
+                                                ) : (
+                                                    <div className="text-accent-teal flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Stable (→)</div>
+                                                )}
+                                            </div>
+                                            <div className="mt-2 text-sm text-center text-primary-ink/80 max-w-sm">
+                                                {diagnosisResult.trend === 'deteriorating' ? "Health is dropping faster than the historical baseline due to sustained stress."
+                                                    : diagnosisResult.trend === 'improving' ? "Recent driving patterns are showing less stress on the engine components."
+                                                        : "Degradation is consistent with normal usage constraints."}
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <Card className="bg-white border-accent-indigo/10 shadow-float p-8">
                                         <div className="mb-6 pb-6 border-b border-functional-mist">
-                                            <div className="mb-2">
-                                                <Caption className="text-functional-stone/70">Root Cause</Caption>
+                                            <div className="mb-4">
+                                                <Caption className="text-functional-stone/70">Top Stress Factors</Caption>
                                             </div>
-                                            <Body className="font-bold text-xl md:text-2xl text-primary-ink">{diagnosisResult.cause}</Body>
-                                        </div>
-                                        <div className="space-y-6">
-                                            <div>
-                                                <Caption className="mb-2 text-functional-stone/70">Recommended Fix</Caption>
-                                                <div className="text-primary-ink font-medium text-lg leading-relaxed">{diagnosisResult.fix}</div>
-                                            </div>
-                                            <div>
-                                                <Caption className="mb-2 text-functional-stone/70">Reference</Caption>
-                                                <div className="text-primary-clay font-bold font-serif text-xl">{diagnosisResult.reference}</div>
-                                            </div>
+                                            <ul className="list-disc pl-5">
+                                                {(diagnosisResult.primary_stress_factors || []).map((factor, idx) => (
+                                                    <li key={idx} className="font-bold text-lg md:text-xl text-primary-ink mb-3">{factor}</li>
+                                                ))}
+                                            </ul>
                                         </div>
                                     </Card>
                                 </div>
