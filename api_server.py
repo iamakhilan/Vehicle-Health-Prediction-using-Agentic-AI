@@ -1,35 +1,12 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import sys
-import os
 
-# Add parent directory to path to import agent1_diagnoser
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-from agent1_diagnoser import diagnose_to_json
-import feature_engineering
-import health_model
-import explanation_engine
+from backend import feature_engineering
+from backend import health_model
+from backend import explanation_engine
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
-
-@app.route('/diagnose', methods=['POST'])
-def run_diagnosis():
-    data = request.json
-    alert_text = data.get('alert', '')
-    
-    if not alert_text:
-        return jsonify({"error": "No alert text provided"}), 400
-    
-    print(f"Received alert: {alert_text}")
-    try:
-        # Call the agent
-        result = diagnose_to_json(alert_text)
-        return jsonify({"diagnosis": result})
-    except Exception as e:
-        print(f"Error processing diagnosis: {e}")
-        return jsonify({"error": str(e)}), 500
 
 # --- AGENT 2: SERVICE ADVISOR (Rule-Based) ---
 @app.route('/estimate', methods=['POST'])
@@ -130,6 +107,15 @@ def schedule_service():
     })
 
 
+# --- NEW: VEHICLE HEALTH HISTORY ---
+VEHICLE_HISTORY = {}
+
+@app.route('/vehicle-history/<vehicle_id>', methods=['GET'])
+def get_vehicle_history(vehicle_id):
+    history = VEHICLE_HISTORY.get(vehicle_id, [])
+    return jsonify(history)
+
+
 # --- NEW: CONDITION-BASED PREDICTION API ---
 @app.route('/predict', methods=['POST'])
 def predict_health():
@@ -151,6 +137,21 @@ def predict_health():
     # Explanation
     primary_stress_factors = explanation_engine.generate_explanations(norm_features)
     
+    # Store history
+    if vehicle_id not in VEHICLE_HISTORY:
+        VEHICLE_HISTORY[vehicle_id] = []
+        
+    current_time = datetime.now().strftime("%H:%M")
+    
+    VEHICLE_HISTORY[vehicle_id].append({
+        "time": current_time,
+        "health": round(health_score, 1)
+    })
+    
+    # Keep only last 50 records
+    if len(VEHICLE_HISTORY[vehicle_id]) > 50:
+        VEHICLE_HISTORY[vehicle_id] = VEHICLE_HISTORY[vehicle_id][-50:]
+    
     return jsonify({
         "vehicle_id": vehicle_id,
         "health_score": round(health_score, 1),
@@ -162,5 +163,7 @@ def predict_health():
     })
 
 if __name__ == '__main__':
-    print("Starting Main API Server on port 5000...")
-    app.run(port=5000, debug=True)
+    print("Vehicle Health API running at:")
+    print("http://127.0.0.1:5000")
+    print("http://10.12.194.189:5000")
+    app.run(host="0.0.0.0", port=5000, debug=True)

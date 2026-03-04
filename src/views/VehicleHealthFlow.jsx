@@ -5,6 +5,8 @@ import { H1, H2, H3, Body, Caption } from '../components/ui/Typography';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import AgentStage from '../components/ui/AgentStage';
+import { API_BASE_URL } from '../config/api';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // --- AGENT 0: SENSOR DATA & ANOMALY DETECTION ---
 const SENSORS = [
@@ -71,14 +73,20 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
     const [diagnosisResult, setDiagnosisResult] = useState(DIAGNOSIS);
     const [repairPlan, setRepairPlan] = useState(REPAIR_PLAN);
     const [schedule, setSchedule] = useState(SCHEDULE);
+    const [healthHistory, setHealthHistory] = useState([]);
 
     const handleRunDiagnosis = async () => {
         setStep(STEPS.DIAGNOSIS);
-        // Start Agent 1 (Chained)
+        // Start Agent 1
         setAgent1State('processing');
 
+        let currentFix = "General Inspection";
+        let currentDiagnosis = "Telemetry Anomaly";
+        let estimatedTime = "Unknown";
+
+        // --- AGENT 1: DIAGNOSTICIAN ---
         try {
-            const response = await fetch('http://localhost:5000/predict', {
+            const response = await fetch(`${API_BASE_URL}/predict`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -95,9 +103,6 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
 
             const data = await response.json();
 
-            let currentFix = "General Inspection";
-            let currentDiagnosis = "Telemetry Anomaly";
-
             if (data) {
                 setDiagnosisResult({
                     health_score: data.health_score || 0,
@@ -107,23 +112,41 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                     primary_stress_factors: data.primary_stress_factors || [],
                     stress_index: data.stress_index || 0
                 });
+
+                // Fetch updated history
+                try {
+                    const historyRes = await fetch(`${API_BASE_URL}/vehicle-history/${data.vehicle_id}`);
+                    const historyData = await historyRes.json();
+                    setHealthHistory(historyData);
+                } catch (err) {
+                    console.error("Failed to fetch history:", err);
+                }
             }
-
+        } catch (error) {
+            console.error("API error on predict:", error);
+            setDiagnosisResult({
+                ...DIAGNOSIS,
+                risk_level: "Unknown",
+                cause: "Unable to reach diagnostics server"
+            });
+        } finally {
             setAgent1State('complete');
+        }
 
-            // --- AGENT 2: ESTIMATE (Service Advisor) ---
-            setAgent2State('processing');
+        // --- AGENT 2: ESTIMATE (Service Advisor) ---
+        setAgent2State('processing');
+        await new Promise(r => setTimeout(r, 800));
 
-            // Artificial delay for UX
-            await new Promise(r => setTimeout(r, 800));
-
-            const estResponse = await fetch('http://localhost:5000/estimate', {
+        try {
+            const estResponse = await fetch(`${API_BASE_URL}/estimate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ diagnosis: currentDiagnosis, fix: currentFix })
             });
 
             const estData = await estResponse.json();
+            estimatedTime = estData.estimated_time || "1 hour";
+
             setRepairPlan({
                 action: estData.action,
                 parts_cost: estData.parts_cost,
@@ -132,16 +155,25 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                 estimated_time: estData.estimated_time,
                 notes: estData.notes
             });
+        } catch (error) {
+            console.error("API error on estimate:", error);
+            setRepairPlan({
+                ...REPAIR_PLAN,
+                action: "Unable to reach diagnostics server",
+                total_cost: "N/A",
+                estimated_time: "Unknown"
+            });
+            estimatedTime = "Unknown";
+        }
 
-            // --- AGENT 3: SCHEDULE (Scheduler) ---
+        // --- AGENT 3: SCHEDULE (Scheduler) ---
+        await new Promise(r => setTimeout(r, 600));
 
-            // Artificial delay for UX
-            await new Promise(r => setTimeout(r, 600));
-
-            const schedResponse = await fetch('http://localhost:5000/schedule', {
+        try {
+            const schedResponse = await fetch(`${API_BASE_URL}/schedule`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ duration: estData.estimated_time })
+                body: JSON.stringify({ duration: estimatedTime })
             });
 
             const schedData = await schedResponse.json();
@@ -149,18 +181,15 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                 next_slot: schedData.next_slot,
                 location: schedData.location
             });
-
-            setAgent2State('complete');
         } catch (error) {
-            console.error("Diagnosis Failed:", error);
-            // Fallback to mock or error state if needed
-            setDiagnosisResult({
-                ...DIAGNOSIS,
-                cause: "Connection Error: Ensure API is running"
+            console.error("API error on schedule:", error);
+            setSchedule({
+                next_slot: "Unavailable",
+                location: "Unable to reach server"
             });
+        } finally {
+            setAgent2State('complete');
         }
-
-
     };
 
     const handleApprove = () => {
@@ -351,6 +380,36 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                                         : "Degradation is consistent with normal usage constraints."}
                                             </div>
                                         </div>
+
+                                        {/* NEW: VEHICLE HEALTH TIMELINE */}
+                                        {healthHistory.length > 0 && (
+                                            <div className="mt-8">
+                                                <Caption className="text-functional-stone/70 mb-4 block">Vehicle Health Timeline</Caption>
+                                                <div className="h-48 w-full bg-white/50 rounded-xl p-4 border border-solid border-functional-stone/20">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <LineChart data={healthHistory} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                                                            <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#8C8C8C' }} tickMargin={10} />
+                                                            <YAxis domain={['auto', 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#8C8C8C' }} />
+                                                            <Tooltip
+                                                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                                                formatter={(value) => [`${value}%`, 'Health']}
+                                                                labelStyle={{ color: '#8C8C8C', marginBottom: '4px' }}
+                                                            />
+                                                            <Line
+                                                                type="monotone"
+                                                                dataKey="health"
+                                                                stroke="#3D8856"
+                                                                strokeWidth={3}
+                                                                dot={{ r: 4, fill: '#3D8856', strokeWidth: 2, stroke: '#FFFFFF' }}
+                                                                activeDot={{ r: 6, strokeWidth: 0 }}
+                                                                animationDuration={1500}
+                                                            />
+                                                        </LineChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <Card className="bg-white border-accent-indigo/10 shadow-float p-8">
