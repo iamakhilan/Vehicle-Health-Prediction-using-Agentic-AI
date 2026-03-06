@@ -6,16 +6,17 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import AgentStage from '../components/ui/AgentStage';
 import { API_BASE_URL } from '../config/api';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // --- AGENT 0: SENSOR DATA & ANOMALY DETECTION ---
-const SENSORS = [
-    { id: 'temp', label: 'Engine Temp', value: '110°C', unit: 'Normal: 90°C', status: 'error', icon: Thermometer },
-    { id: 'vibration', label: 'Vibration', value: 'High', unit: 'Normal: Low', status: 'warning', icon: Activity },
+// Will be populated dynamically by the backend telemetry stream.
+const DEFAULT_SENSORS = [
+    { id: 'temp', label: 'Engine Temp', value: '-- °C', unit: 'Normal: 90°C', status: 'success', icon: Thermometer },
+    { id: 'vibration', label: 'RPM Stress', value: '--', unit: 'Normal: Low', status: 'success', icon: Activity },
     { id: 'battery', label: 'Battery', value: '12.4V', unit: 'Stable', status: 'success', icon: Zap },
-    { id: 'oil', label: 'Oil Pressure', value: '45 PSI', unit: 'Normal: 40-50 PSI', status: 'success', icon: Activity },
-    { id: 'coolant', label: 'Coolant Level', value: '98%', unit: 'Optimal', status: 'success', icon: Thermometer },
-    { id: 'brake', label: 'Brake Pad', value: '85%', unit: 'Good', status: 'success', icon: Wrench },
+    { id: 'oil', label: 'Oil Pressure', value: '-- PSI', unit: 'Normal: 40-50 PSI', status: 'success', icon: Activity },
+    { id: 'coolant', label: 'Coolant Level', value: '--', unit: 'Optimal', status: 'success', icon: Thermometer },
+    { id: 'brake', label: 'Fuel Pressure', value: '--', unit: 'Good', status: 'success', icon: Wrench },
 ];
 
 // --- AGENT 1: DIAGNOSTICIAN (Upgraded to Predictor v3) ---
@@ -25,7 +26,9 @@ const DIAGNOSIS = {
     risk_level: "Low",
     trend: "stable",
     primary_stress_factors: [],
-    stress_index: 0
+    stress_index: 0,
+    failure_probability: 0,
+    explanation: ""
 };
 
 // --- AGENT 2: SERVICE ADVISOR ---
@@ -58,6 +61,52 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
     const [agent1State, setAgent1State] = useState('idle'); // 'idle' | 'processing' | 'complete'
     const [agent2State, setAgent2State] = useState('idle');
 
+    // Telemetry streaming states
+    const [telemetryIndex, setTelemetryIndex] = useState(0);
+    const [liveTelemetry, setLiveTelemetry] = useState(null);
+    const [sensorCards, setSensorCards] = useState(DEFAULT_SENSORS);
+
+    // Dataset playback interval
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchTelemetry = async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/simulated-data?index=${telemetryIndex}`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (isMounted && data.telemetry) {
+                    setLiveTelemetry(data.telemetry);
+
+                    // Update sensor cards safely
+                    setSensorCards(prev => prev.map(sensor => {
+                        if (sensor.id === 'temp') return { ...sensor, value: `${Math.round(data.telemetry.coolant_temperature)}°C`, status: data.telemetry.coolant_temperature > 100 ? 'error' : 'success' };
+                        if (sensor.id === 'vibration') return { ...sensor, value: `${Math.round(data.telemetry.rpm)}`, status: data.telemetry.rpm > 3500 ? 'warning' : 'success' };
+                        if (sensor.id === 'oil') return { ...sensor, value: `${Math.round(data.telemetry.oil_pressure)} PSI` };
+                        if (sensor.id === 'coolant') return { ...sensor, value: `${Math.round(data.telemetry.coolant_pressure)} PSI` };
+                        if (sensor.id === 'brake') return { ...sensor, value: `${Math.round(data.telemetry.fuel_pressure)} PSI` };
+                        return sensor;
+                    }));
+
+                    setTelemetryIndex(data.next_index);
+                }
+            } catch (err) {
+                console.error("Telemetry fetch error:", err);
+            }
+        };
+
+        const interval = setInterval(fetchTelemetry, 3000);
+
+        // Initial fetch so it doesn't wait 3 seconds for the first load
+        fetchTelemetry();
+
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+        };
+    }, [telemetryIndex]);
+
     // Reset loop for demo
     useEffect(() => {
         if (step === STEPS.MONITOR) {
@@ -80,54 +129,80 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
         // Start Agent 1
         setAgent1State('processing');
 
-        let currentFix = "General Inspection";
-        let currentDiagnosis = "Telemetry Anomaly";
+        let currentFactors = [];
+        let currentRisk = "Unknown";
         let estimatedTime = "Unknown";
+        let apiError = null;
 
         // --- AGENT 1: DIAGNOSTICIAN ---
         try {
+            // Send actual live telemetry to the ML model if available, else send fallback
+            const payloadData = liveTelemetry ? {
+                vehicle_id: "demo_car_01",
+                engine_runtime: 60,
+                rpm: liveTelemetry.rpm,
+                engine_load: 85, // dataset doesn't have load
+                coolant_temp: liveTelemetry.coolant_temperature,
+                throttle_pos: 70, // generic fallback
+                fuel_trim: 18,
+                dtc_flag: liveTelemetry.coolant_temperature > 100 || liveTelemetry.rpm > 3500
+            } : {
+                vehicle_id: "demo_car_01",
+                engine_runtime: 60,
+                rpm: 4500,
+                engine_load: 85,
+                coolant_temp: 110,
+                throttle_pos: 70,
+                fuel_trim: 18,
+                dtc_flag: true
+            };
+
             const response = await fetch(`${API_BASE_URL}/predict`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    vehicle_id: "demo_car_01",
-                    engine_runtime: 60,
-                    rpm: 4500,
-                    engine_load: 85,
-                    coolant_temp: 110,
-                    throttle_pos: 70,
-                    fuel_trim: 18,
-                    dtc_flag: true
-                })
+                body: JSON.stringify(payloadData)
             });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || `Prediction failed with status: ${response.status}`);
+            }
 
             const data = await response.json();
 
             if (data) {
+                currentFactors = data.primary_stress_factors || [];
+                currentRisk = data.risk_level || "Unknown";
+
                 setDiagnosisResult({
                     health_score: data.health_score || 0,
                     remaining_km: data.remaining_km || 0,
-                    risk_level: data.risk_level || "Unknown",
+                    risk_level: currentRisk,
                     trend: data.trend || "stable",
-                    primary_stress_factors: data.primary_stress_factors || [],
-                    stress_index: data.stress_index || 0
+                    primary_stress_factors: currentFactors,
+                    stress_index: data.stress_index || 0,
+                    failure_probability: data.failure_probability || 0,
+                    explanation: data.explanation || ""
                 });
 
                 // Fetch updated history
                 try {
                     const historyRes = await fetch(`${API_BASE_URL}/vehicle-history/${data.vehicle_id}`);
-                    const historyData = await historyRes.json();
-                    setHealthHistory(historyData);
+                    if (historyRes.ok) {
+                        const historyData = await historyRes.json();
+                        setHealthHistory(historyData);
+                    }
                 } catch (err) {
                     console.error("Failed to fetch history:", err);
                 }
             }
         } catch (error) {
             console.error("API error on predict:", error);
+            apiError = error.message;
             setDiagnosisResult({
                 ...DIAGNOSIS,
                 risk_level: "Unknown",
-                cause: "Unable to reach diagnostics server"
+                cause: error.message || "Unable to reach diagnostics server"
             });
         } finally {
             setAgent1State('complete');
@@ -137,33 +212,49 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
         setAgent2State('processing');
         await new Promise(r => setTimeout(r, 800));
 
-        try {
-            const estResponse = await fetch(`${API_BASE_URL}/estimate`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ diagnosis: currentDiagnosis, fix: currentFix })
-            });
+        if (!apiError) {
+            try {
+                const estResponse = await fetch(`${API_BASE_URL}/estimate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ stress_factors: currentFactors, risk_level: currentRisk })
+                });
 
-            const estData = await estResponse.json();
-            estimatedTime = estData.estimated_time || "1 hour";
+                if (!estResponse.ok) {
+                    const errData = await estResponse.json();
+                    throw new Error(errData.error || `Estimate failed with status: ${estResponse.status}`);
+                }
 
-            setRepairPlan({
-                action: estData.action,
-                parts_cost: estData.parts_cost,
-                labor_cost: estData.labor_cost,
-                total_cost: estData.total_cost,
-                estimated_time: estData.estimated_time,
-                notes: estData.notes
-            });
-        } catch (error) {
-            console.error("API error on estimate:", error);
+                const estData = await estResponse.json();
+                estimatedTime = estData.estimated_time || "1 hour";
+
+                setRepairPlan({
+                    action: estData.action,
+                    parts_cost: estData.parts_cost,
+                    labor_cost: estData.labor_cost,
+                    total_cost: estData.total_cost,
+                    estimated_time: estData.estimated_time,
+                    notes: estData.notes
+                });
+            } catch (error) {
+                console.error("API error on estimate:", error);
+                setRepairPlan({
+                    ...REPAIR_PLAN,
+                    action: error.message || "Failed to estimate costs",
+                    total_cost: "N/A",
+                    estimated_time: "Unknown"
+                });
+                estimatedTime = "Unknown";
+            }
+        } else {
             setRepairPlan({
                 ...REPAIR_PLAN,
-                action: "Unable to reach diagnostics server",
+                action: "Dependencies failed. Cannot compute estimate.",
                 total_cost: "N/A",
                 estimated_time: "Unknown"
             });
-            estimatedTime = "Unknown";
+            setAgent2State('complete');
+            return; // Skip scheduling if earlier steps completely failed
         }
 
         // --- AGENT 3: SCHEDULE (Scheduler) ---
@@ -176,6 +267,10 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                 body: JSON.stringify({ duration: estimatedTime })
             });
 
+            if (!schedResponse.ok) {
+                throw new Error(`Schedule failed`);
+            }
+
             const schedData = await schedResponse.json();
             setSchedule({
                 next_slot: schedData.next_slot,
@@ -185,7 +280,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
             console.error("API error on schedule:", error);
             setSchedule({
                 next_slot: "Unavailable",
-                location: "Unable to reach server"
+                location: "Online booking offline"
             });
         } finally {
             setAgent2State('complete');
@@ -238,9 +333,9 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                         </Card>
 
                         <div>
-                            <Caption className="mb-6 block text-lg">Live Telemetry</Caption>
+                            <Caption className="mb-6 block text-lg">Live Telemetry (Updated dynamically)</Caption>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {SENSORS.map((sensor) => (
+                                {sensorCards.map((sensor) => (
                                     <Card key={sensor.id} className="flex flex-col justify-between p-6 bg-white/50 h-full hover:bg-white transition-colors duration-200">
                                         <div className="flex justify-between items-start mb-4">
                                             <div className="flex items-center gap-3">
@@ -345,29 +440,45 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                             >
                                 <div className="space-y-6">
                                     <div>
-                                        <H1 className="text-4xl md:text-5xl mb-4 text-primary-ink">Health: <span className={diagnosisResult.risk_level === 'High' ? 'text-functional-error' : 'text-accent-teal'}>{diagnosisResult.health_score}%</span></H1>
+                                        <H1 className="text-4xl md:text-5xl mb-4 text-primary-ink">Health: <span className={diagnosisResult.risk_level === 'HIGH' || diagnosisResult.risk_level === 'High' ? 'text-functional-error' : 'text-accent-teal'}>{diagnosisResult.health_score}%</span></H1>
                                         <Body className="text-functional-stone text-lg">
-                                            Prediction based on live vehicle telemetry.
+                                            {diagnosisResult.explanation ? `Diagnosis: ${diagnosisResult.explanation} (${(diagnosisResult.failure_probability * 100).toFixed(0)}%)` : "Prediction based on live vehicle telemetry."}
                                         </Body>
-                                        <div className={`mt-4 mb-2 font-bold px-4 py-2 rounded-lg inline-block ${diagnosisResult.risk_level === 'High' ? 'bg-functional-error/20 text-functional-error' :
-                                            diagnosisResult.risk_level === 'Medium' ? 'bg-accent-teal/20 text-accent-teal' :
+                                        <div className={`mt-4 mb-2 font-bold px-4 py-2 rounded-lg inline-block ${diagnosisResult.risk_level === 'HIGH' || diagnosisResult.risk_level === 'High' ? 'bg-functional-error/20 text-functional-error' :
+                                            diagnosisResult.risk_level === 'MEDIUM' || diagnosisResult.risk_level === 'Medium' ? 'bg-accent-teal/20 text-accent-teal' :
                                                 'bg-functional-success/20 text-functional-success'
                                             }`}>
-                                            Risk Badge: {diagnosisResult.risk_level}
+                                            Risk Badge: {diagnosisResult.risk_level} {diagnosisResult.failure_probability > 0 && `(${(diagnosisResult.failure_probability * 100).toFixed(0)}%)`}
                                         </div>
-                                        {diagnosisResult.risk_level === 'High' && (
+                                        {(diagnosisResult.risk_level === 'HIGH' || diagnosisResult.risk_level === 'High') && (
                                             <div className="mt-2 p-4 bg-functional-error/10 border-l-4 border-functional-error text-functional-error text-lg font-bold">
                                                 Warning: Critical vehicle health degradation detected. Immediate service advised.
                                             </div>
                                         )}
+
+                                        {/* ML Failure Probability Chart */}
+                                        <div className="mt-6">
+                                            <Caption className="text-functional-stone/70 mb-2 block">Failure Probability</Caption>
+                                            <div className="h-20 w-full bg-white/50 rounded-xl p-4 border border-solid border-functional-stone/20">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <BarChart data={[{ name: 'Probability', value: diagnosisResult.failure_probability * 100 }]} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
+                                                        <XAxis type="number" domain={[0, 100]} hide />
+                                                        <YAxis dataKey="name" type="category" hide />
+                                                        <Tooltip formatter={(value) => [`${value.toFixed(1)}%`, 'Probability']} />
+                                                        <Bar dataKey="value" fill={diagnosisResult.risk_level === 'HIGH' ? '#ef4444' : diagnosisResult.risk_level === 'MEDIUM' ? '#f59e0b' : '#10b981'} radius={[0, 4, 4, 0]} />
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </div>
+
                                         <div className="mt-6">
                                             <div className="text-2xl font-bold mb-4 text-primary-ink">Remaining Safe Distance: <span className="text-accent-indigo">{diagnosisResult.remaining_km} KM</span></div>
                                         </div>
                                         <div className="mt-4 p-4 border-2 border-solid border-functional-stone/30 rounded-xl bg-white/50 flex flex-col items-center">
                                             <div className="text-sm text-functional-stone uppercase tracking-wide mb-2">Trend Analysis</div>
                                             <div className="flex items-center gap-3">
-                                                {diagnosisResult.trend === 'deteriorating' ? (
-                                                    <div className="text-functional-error flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Deteriorating (↘)</div>
+                                                {diagnosisResult.trend === 'deteriorating' || diagnosisResult.trend === 'Degrading' ? (
+                                                    <div className="text-functional-error flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Degrading (↘)</div>
                                                 ) : diagnosisResult.trend === 'improving' ? (
                                                     <div className="text-functional-success flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Improving (↗)</div>
                                                 ) : (
@@ -375,7 +486,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                                 )}
                                             </div>
                                             <div className="mt-2 text-sm text-center text-primary-ink/80 max-w-sm">
-                                                {diagnosisResult.trend === 'deteriorating' ? "Health is dropping faster than the historical baseline due to sustained stress."
+                                                {diagnosisResult.trend === 'deteriorating' || diagnosisResult.trend === 'Degrading' ? "Health is dropping faster than the historical baseline due to sustained stress."
                                                     : diagnosisResult.trend === 'improving' ? "Recent driving patterns are showing less stress on the engine components."
                                                         : "Degradation is consistent with normal usage constraints."}
                                             </div>
@@ -410,16 +521,37 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                                 </div>
                                             </div>
                                         )}
+
+                                        {/* ML Feature Importance Chart (SHAP) */}
+                                        {diagnosisResult.primary_stress_factors.length > 0 && (
+                                            <div className="mt-8">
+                                                <Caption className="text-functional-stone/70 mb-4 block">Primary SHAP Contributors</Caption>
+                                                <div className="h-48 w-full bg-white/50 rounded-xl p-4 border border-solid border-functional-stone/20">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <BarChart
+                                                            data={diagnosisResult.primary_stress_factors.map((f, i) => ({ name: f, value: diagnosisResult.primary_stress_factors.length - i }))}
+                                                            layout="vertical"
+                                                            margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                                                        >
+                                                            <XAxis type="number" hide />
+                                                            <YAxis dataKey="name" type="category" tick={{ fontSize: 12, fill: '#4b5563' }} width={90} axisLine={false} tickLine={false} />
+                                                            <Tooltip cursor={{ fill: 'transparent' }} formatter={() => ['Factor Impact', 'Rank']} />
+                                                            <Bar dataKey="value" fill="#4f46e5" radius={[0, 4, 4, 0]} barSize={20} />
+                                                        </BarChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <Card className="bg-white border-accent-indigo/10 shadow-float p-8">
                                         <div className="mb-6 pb-6 border-b border-functional-mist">
                                             <div className="mb-4">
-                                                <Caption className="text-functional-stone/70">Top Stress Factors</Caption>
+                                                <Caption className="text-functional-stone/70">Primary contributors</Caption>
                                             </div>
                                             <ul className="list-disc pl-5">
                                                 {(diagnosisResult.primary_stress_factors || []).map((factor, idx) => (
-                                                    <li key={idx} className="font-bold text-lg md:text-xl text-primary-ink mb-3">{factor}</li>
+                                                    <li key={idx} className="font-bold text-lg md:text-xl text-primary-ink mb-3">{factor.replace('_', ' ')}</li>
                                                 ))}
                                             </ul>
                                         </div>
