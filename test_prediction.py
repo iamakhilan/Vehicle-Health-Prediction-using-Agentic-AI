@@ -7,8 +7,15 @@ def run_tests():
     # Test 1: High Stress
     print("--- Test 1: High Stress ---")
     res = client.post('/predict', json={
-        "rpm": "6500",
-        "engine_load": "90%",
+        "vehicle_id": "test_high_stress",
+        "engine_runtime": 60,
+        "rpm": 6500,
+        "oil_pressure": 1.5,
+        "fuel_pressure": 3.0,
+        "coolant_pressure": 4.0,
+        "oil_temp": 110,
+        "coolant_temperature": 120,
+        "engine_load": 90,
         "coolant_temp": 120,
         "throttle_pos": 85,
         "fuel_trim": 20,
@@ -19,9 +26,16 @@ def run_tests():
     # Test 2: Low Stress (Healthy)
     print("\n--- Test 2: Low Stress (Healthy) ---")
     res = client.post('/predict', json={
-        "rpm": 2500,
+        "vehicle_id": "test_low_stress",
+        "engine_runtime": 60,
+        "rpm": 800,
+        "oil_pressure": 3.5,
+        "fuel_pressure": 7.0,
+        "coolant_pressure": 2.0,
+        "oil_temp": 77,
+        "coolant_temperature": 75,
         "engine_load": 30,
-        "coolant_temp": 90,
+        "coolant_temp": 75,
         "throttle_pos": 20,
         "fuel_trim": 2,
         "dtc_flag": False

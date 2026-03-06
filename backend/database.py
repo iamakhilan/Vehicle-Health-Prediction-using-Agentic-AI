@@ -3,7 +3,20 @@ import json
 import time
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / 'vehicle_health.db'
+_default_db_path = Path(__file__).parent.parent / 'vehicle_health.db'
+DB_PATH = _default_db_path
+
+
+def set_db_path(path):
+    """Override DB path (used for test isolation)."""
+    global DB_PATH
+    DB_PATH = Path(path)
+
+
+def reset_db_path():
+    """Reset DB path to default."""
+    global DB_PATH
+    DB_PATH = _default_db_path
 
 def get_connection():
     # Use isolation_level=None for autocommit
@@ -42,9 +55,14 @@ def init_db():
             vehicle_id TEXT,
             timestamp_text TEXT,
             health_score REAL,
+            source_row_index INTEGER,
             FOREIGN KEY(vehicle_id) REFERENCES vehicles(vehicle_id)
         )
     ''')
+    try:
+        c.execute("ALTER TABLE health_history ADD COLUMN source_row_index INTEGER")
+    except sqlite3.OperationalError:
+        pass
     conn.close()
 
 def get_vehicle_state(vehicle_id):
@@ -110,13 +128,13 @@ def update_vehicle_state(vehicle_id, health, runtime, decay, stress_history):
         
     conn.close()
 
-def add_history_record(vehicle_id, timestamp_text, health_score):
+def add_history_record(vehicle_id, timestamp_text, health_score, source_row_index=None):
     conn = get_connection()
     c = conn.cursor()
     c.execute('''
-        INSERT INTO health_history (vehicle_id, timestamp_text, health_score) 
-        VALUES (?, ?, ?)
-    ''', (vehicle_id, timestamp_text, health_score))
+        INSERT INTO health_history (vehicle_id, timestamp_text, health_score, source_row_index) 
+        VALUES (?, ?, ?, ?)
+    ''', (vehicle_id, timestamp_text, health_score, source_row_index))
     
     # Enforce limit of 200 per vehicle
     c.execute("SELECT id FROM health_history WHERE vehicle_id = ? ORDER BY id DESC LIMIT 200", (vehicle_id,))
@@ -127,10 +145,20 @@ def add_history_record(vehicle_id, timestamp_text, health_score):
         
     conn.close()
 
-def get_vehicle_history(vehicle_id):
+def get_vehicle_history(vehicle_id, limit=50):
     conn = get_connection()
     c = conn.cursor()
-    c.execute("SELECT timestamp_text AS time, health_score AS health FROM health_history WHERE vehicle_id = ? ORDER BY id ASC", (vehicle_id,))
+    c.execute('''
+        SELECT time, health, source_row_index
+        FROM (
+            SELECT timestamp_text AS time, health_score AS health, source_row_index, id
+            FROM health_history
+            WHERE vehicle_id = ?
+            ORDER BY id DESC
+            LIMIT ?
+        )
+        ORDER BY id ASC
+    ''', (vehicle_id, limit))
     rows = c.fetchall()
     conn.close()
     return [dict(r) for r in rows]

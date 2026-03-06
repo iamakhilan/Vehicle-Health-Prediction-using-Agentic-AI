@@ -33,8 +33,7 @@ def predict_vehicle_health(input_data):
         if api_key in input_data:
             mapped_data[dataset_key] = input_data[api_key]
         else:
-            # Default to 0 or some value if missing, though API should provide them
-            mapped_data[dataset_key] = 0.0
+            raise ValueError(f"Missing required ML feature mapping: {api_key}")
             
     # Convert to pandas dataframe
     df = pd.DataFrame([mapped_data])

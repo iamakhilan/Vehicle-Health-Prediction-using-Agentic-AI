@@ -37,7 +37,7 @@ def process_vehicle_health(vehicle_id, stress_index, engine_runtime=60.0):
         cumulative_decay = state_row['cumulative_decay']
         try:
             stress_history_list = json.loads(state_row['stress_history'])
-        except:
+        except (json.JSONDecodeError, TypeError):
             stress_history_list = []
     
     # Recalibrated Base decay percentage per unit stress (Increased to make degradation more noticeable)
@@ -60,28 +60,29 @@ def process_vehicle_health(vehicle_id, stress_index, engine_runtime=60.0):
 def analyze_trend(vehicle_id):
     """
     Calculates stress slope to identify trends.
+    Returns: "Stable", "Degrading", or "Improving"
     """
     state_row = database.get_vehicle_state(vehicle_id)
     if not state_row:
-        return "stable"
+        return "Stable"
         
     try:
         history = json.loads(state_row['stress_history'])
-    except:
+    except (json.JSONDecodeError, TypeError):
         history = []
         
     if len(history) < 2:
-        return "stable"
+        return "Stable"
         
     # basic slope of recent history
     slope = history[-1] - history[0]
     
     if slope > 0.05:
-        return "deteriorating"
+        return "Degrading"
     elif slope < -0.05:
-        return "improving"
+        return "Improving"
     else:
-        return "stable"
+        return "Stable"
 
 def estimate_remaining_distance(vehicle_id, current_health):
     """

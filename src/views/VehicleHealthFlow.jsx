@@ -28,7 +28,9 @@ const DIAGNOSIS = {
     primary_stress_factors: [],
     stress_index: 0,
     failure_probability: 0,
-    explanation: ""
+    explanation: "",
+    source_row_index: null,
+    input_features: null
 };
 
 // --- AGENT 2: SERVICE ADVISOR ---
@@ -56,15 +58,21 @@ const STEPS = {
 
 const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
     const [step, setStep] = useState(initialState);
+    const sessionVehicleIdRef = React.useRef(`demo_car_${Date.now()}_${Math.floor(Math.random() * 1000)}`);
 
     // Independent agent states
     const [agent1State, setAgent1State] = useState('idle'); // 'idle' | 'processing' | 'complete'
     const [agent2State, setAgent2State] = useState('idle');
 
     // Telemetry streaming states
-    const [telemetryIndex, setTelemetryIndex] = useState(0);
+    const [telemetryIndex, setTelemetryIndex] = useState(() => Math.floor(Math.random() * 10000));
+    const telemetryIndexRef = React.useRef(telemetryIndex);
     const [liveTelemetry, setLiveTelemetry] = useState(null);
     const [sensorCards, setSensorCards] = useState(DEFAULT_SENSORS);
+
+    // NEW state for freezing telemetry
+    const [currentRowIndex, setCurrentRowIndex] = useState(0);
+    const [anomalousTelemetry, setAnomalousTelemetry] = useState(null);
 
     // Dataset playback interval
     useEffect(() => {
@@ -72,12 +80,13 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
 
         const fetchTelemetry = async () => {
             try {
-                const res = await fetch(`${API_BASE_URL}/simulated-data?index=${telemetryIndex}`);
+                const res = await fetch(`${API_BASE_URL}/simulated-data?index=${telemetryIndexRef.current}`);
                 if (!res.ok) return;
                 const data = await res.json();
 
                 if (isMounted && data.telemetry) {
                     setLiveTelemetry(data.telemetry);
+                    setCurrentRowIndex(data.row_index);
 
                     // Update sensor cards safely
                     setSensorCards(prev => prev.map(sensor => {
@@ -90,6 +99,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                     }));
 
                     setTelemetryIndex(data.next_index);
+                    telemetryIndexRef.current = data.next_index;
                 }
             } catch (err) {
                 console.error("Telemetry fetch error:", err);
@@ -105,7 +115,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
             isMounted = false;
             clearInterval(interval);
         };
-    }, [telemetryIndex]);
+    }, []);
 
     // Reset loop for demo
     useEffect(() => {
@@ -116,6 +126,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
     }, [step]);
 
     const handleSimulateAnomaly = () => {
+        setAnomalousTelemetry(liveTelemetry);
         setStep(STEPS.ANOMALY);
     };
 
@@ -137,19 +148,39 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
         // --- AGENT 1: DIAGNOSTICIAN ---
         try {
             // Send actual live telemetry to the ML model if available, else send fallback
-            const payloadData = liveTelemetry ? {
-                vehicle_id: "demo_car_01",
+            // Use anomalousTelemetry if available, else liveTelemetry
+            const telemetryToUse = anomalousTelemetry || liveTelemetry;
+            const rowIndexToUse = anomalousTelemetry ? currentRowIndex : null;
+
+            const payloadData = telemetryToUse ? {
+                vehicle_id: sessionVehicleIdRef.current,
                 engine_runtime: 60,
-                rpm: liveTelemetry.rpm,
+                source_row_index: rowIndexToUse,
+                // ML model expected inputs
+                rpm: telemetryToUse.rpm,
+                oil_pressure: telemetryToUse.oil_pressure,
+                fuel_pressure: telemetryToUse.fuel_pressure,
+                coolant_pressure: telemetryToUse.coolant_pressure,
+                oil_temp: telemetryToUse.oil_temp,
+                coolant_temperature: telemetryToUse.coolant_temperature,
+                // Rule-based fallback compatibility inputs
                 engine_load: 85, // dataset doesn't have load
-                coolant_temp: liveTelemetry.coolant_temperature,
-                throttle_pos: 70, // generic fallback
+                coolant_temp: telemetryToUse.coolant_temperature,
+                throttle_pos: 70,
                 fuel_trim: 18,
-                dtc_flag: liveTelemetry.coolant_temperature > 100 || liveTelemetry.rpm > 3500
+                dtc_flag: telemetryToUse.coolant_temperature > 100 || telemetryToUse.rpm > 3500
             } : {
-                vehicle_id: "demo_car_01",
+                vehicle_id: sessionVehicleIdRef.current,
                 engine_runtime: 60,
+                source_row_index: null,
+                // ML model expected inputs (fallback defaults)
                 rpm: 4500,
+                oil_pressure: 3.5,
+                fuel_pressure: 6.0,
+                coolant_pressure: 2.5,
+                oil_temp: 95,
+                coolant_temperature: 110,
+                // Rule-based fallback compatibility inputs
                 engine_load: 85,
                 coolant_temp: 110,
                 throttle_pos: 70,
@@ -182,12 +213,14 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                     primary_stress_factors: currentFactors,
                     stress_index: data.stress_index || 0,
                     failure_probability: data.failure_probability || 0,
-                    explanation: data.explanation || ""
+                    explanation: data.explanation || "",
+                    source_row_index: data.source_row_index || null,
+                    input_features: data.input_features || null
                 });
 
                 // Fetch updated history
                 try {
-                    const historyRes = await fetch(`${API_BASE_URL}/vehicle-history/${data.vehicle_id}`);
+                    const historyRes = await fetch(`${API_BASE_URL}/vehicle-history/${data.vehicle_id}?limit=50`);
                     if (historyRes.ok) {
                         const historyData = await historyRes.json();
                         setHealthHistory(historyData);
@@ -384,7 +417,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                         <div className="mb-12">
                             <H1 className="mb-4 text-4xl md:text-5xl">Anomaly Detected</H1>
                             <Body variant="serif" className="text-functional-stone text-lg md:text-xl max-w-xl mx-auto leading-relaxed">
-                                Agent 0 triggered an alert. Unusual vibration and temperature patterns detected in the engine block.
+                                Agent 0 triggered an alert from <span className="font-bold text-primary-ink">CSV Row #{currentRowIndex}</span>. Unusual vibration and temperature patterns detected in the engine block.
                             </Body>
                         </div>
 
@@ -394,17 +427,25 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                 Agent 0 Report
                             </H3>
                             <ul className="space-y-4">
-                                <li className="flex justify-between items-center text-base md:text-lg pb-4 border-b border-functional-error/10 last:border-0 last:pb-0">
-                                    <span className="text-functional-stone">Error Code</span>
-                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg font-mono">P0300</span>
+                                <li className="flex justify-between items-center text-base md:text-lg pb-4 border-b border-functional-error/10">
+                                    <span className="text-functional-stone">Source Row</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg font-mono">#{currentRowIndex}</span>
                                 </li>
-                                <li className="flex justify-between items-center text-base md:text-lg pb-4 border-b border-functional-error/10 last:border-0 last:pb-0">
+                                <li className="flex justify-between items-center text-base md:text-lg pb-4 border-b border-functional-error/10">
                                     <span className="text-functional-stone">Engine Temp</span>
-                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">110°C</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">{anomalousTelemetry ? `${Math.round(anomalousTelemetry.coolant_temperature)}°C` : '--'}</span>
+                                </li>
+                                <li className="flex justify-between items-center text-base md:text-lg pb-4 border-b border-functional-error/10">
+                                    <span className="text-functional-stone">RPM</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">{anomalousTelemetry ? Math.round(anomalousTelemetry.rpm) : '--'}</span>
+                                </li>
+                                <li className="flex justify-between items-center text-base md:text-lg pb-4 border-b border-functional-error/10">
+                                    <span className="text-functional-stone">Oil Pressure</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">{anomalousTelemetry ? `${Number(anomalousTelemetry.oil_pressure).toFixed(1)} PSI` : '--'}</span>
                                 </li>
                                 <li className="flex justify-between items-center text-base md:text-lg">
-                                    <span className="text-functional-stone">Vibration</span>
-                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">Level 4</span>
+                                    <span className="text-functional-stone">Fuel Pressure</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">{anomalousTelemetry ? `${Number(anomalousTelemetry.fuel_pressure).toFixed(1)} PSI` : '--'}</span>
                                 </li>
                             </ul>
                         </Card>
@@ -440,17 +481,22 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                             >
                                 <div className="space-y-6">
                                     <div>
-                                        <H1 className="text-4xl md:text-5xl mb-4 text-primary-ink">Health: <span className={diagnosisResult.risk_level === 'HIGH' || diagnosisResult.risk_level === 'High' ? 'text-functional-error' : 'text-accent-teal'}>{diagnosisResult.health_score}%</span></H1>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <H1 className="text-4xl md:text-5xl text-primary-ink">Health: <span className={diagnosisResult.risk_level === 'High' ? 'text-functional-error' : 'text-accent-teal'}>{diagnosisResult.health_score}%</span></H1>
+                                            {diagnosisResult.source_row_index != null && (
+                                                <span className="text-sm font-mono bg-accent-indigo/10 text-accent-indigo px-3 py-1.5 rounded-lg">Row #{diagnosisResult.source_row_index}</span>
+                                            )}
+                                        </div>
                                         <Body className="text-functional-stone text-lg">
-                                            {diagnosisResult.explanation ? `Diagnosis: ${diagnosisResult.explanation} (${(diagnosisResult.failure_probability * 100).toFixed(0)}%)` : "Prediction based on live vehicle telemetry."}
+                                            {diagnosisResult.explanation ? `Diagnosis: ${diagnosisResult.explanation}` : "Prediction based on live vehicle telemetry."}
                                         </Body>
-                                        <div className={`mt-4 mb-2 font-bold px-4 py-2 rounded-lg inline-block ${diagnosisResult.risk_level === 'HIGH' || diagnosisResult.risk_level === 'High' ? 'bg-functional-error/20 text-functional-error' :
-                                            diagnosisResult.risk_level === 'MEDIUM' || diagnosisResult.risk_level === 'Medium' ? 'bg-accent-teal/20 text-accent-teal' :
+                                        <div className={`mt-4 mb-2 font-bold px-4 py-2 rounded-lg inline-block ${diagnosisResult.risk_level === 'High' ? 'bg-functional-error/20 text-functional-error' :
+                                            diagnosisResult.risk_level === 'Medium' ? 'bg-accent-teal/20 text-accent-teal' :
                                                 'bg-functional-success/20 text-functional-success'
                                             }`}>
                                             Risk Badge: {diagnosisResult.risk_level} {diagnosisResult.failure_probability > 0 && `(${(diagnosisResult.failure_probability * 100).toFixed(0)}%)`}
                                         </div>
-                                        {(diagnosisResult.risk_level === 'HIGH' || diagnosisResult.risk_level === 'High') && (
+                                        {diagnosisResult.risk_level === 'High' && (
                                             <div className="mt-2 p-4 bg-functional-error/10 border-l-4 border-functional-error text-functional-error text-lg font-bold">
                                                 Warning: Critical vehicle health degradation detected. Immediate service advised.
                                             </div>
@@ -465,7 +511,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                                         <XAxis type="number" domain={[0, 100]} hide />
                                                         <YAxis dataKey="name" type="category" hide />
                                                         <Tooltip formatter={(value) => [`${value.toFixed(1)}%`, 'Probability']} />
-                                                        <Bar dataKey="value" fill={diagnosisResult.risk_level === 'HIGH' ? '#ef4444' : diagnosisResult.risk_level === 'MEDIUM' ? '#f59e0b' : '#10b981'} radius={[0, 4, 4, 0]} />
+                                                        <Bar dataKey="value" fill={diagnosisResult.risk_level === 'High' ? '#ef4444' : diagnosisResult.risk_level === 'Medium' ? '#f59e0b' : '#10b981'} radius={[0, 4, 4, 0]} />
                                                     </BarChart>
                                                 </ResponsiveContainer>
                                             </div>
@@ -477,17 +523,17 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                         <div className="mt-4 p-4 border-2 border-solid border-functional-stone/30 rounded-xl bg-white/50 flex flex-col items-center">
                                             <div className="text-sm text-functional-stone uppercase tracking-wide mb-2">Trend Analysis</div>
                                             <div className="flex items-center gap-3">
-                                                {diagnosisResult.trend === 'deteriorating' || diagnosisResult.trend === 'Degrading' ? (
+                                                {diagnosisResult.trend === 'Degrading' ? (
                                                     <div className="text-functional-error flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Degrading (↘)</div>
-                                                ) : diagnosisResult.trend === 'improving' ? (
+                                                ) : diagnosisResult.trend === 'Improving' ? (
                                                     <div className="text-functional-success flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Improving (↗)</div>
                                                 ) : (
                                                     <div className="text-accent-teal flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Stable (→)</div>
                                                 )}
                                             </div>
                                             <div className="mt-2 text-sm text-center text-primary-ink/80 max-w-sm">
-                                                {diagnosisResult.trend === 'deteriorating' || diagnosisResult.trend === 'Degrading' ? "Health is dropping faster than the historical baseline due to sustained stress."
-                                                    : diagnosisResult.trend === 'improving' ? "Recent driving patterns are showing less stress on the engine components."
+                                                {diagnosisResult.trend === 'Degrading' ? "Health is dropping faster than the historical baseline due to sustained stress."
+                                                    : diagnosisResult.trend === 'Improving' ? "Recent driving patterns are showing less stress on the engine components."
                                                         : "Degradation is consistent with normal usage constraints."}
                                             </div>
                                         </div>
@@ -539,6 +585,24 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                                             <Bar dataKey="value" fill="#4f46e5" radius={[0, 4, 4, 0]} barSize={20} />
                                                         </BarChart>
                                                     </ResponsiveContainer>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Prediction Trace Panel */}
+                                        {diagnosisResult.input_features && (
+                                            <div className="mt-8 border border-functional-stone/20 rounded-xl bg-white/70 p-4">
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <Caption className="text-functional-stone/70">Prediction Trace</Caption>
+                                                    <span className="text-xs bg-primary-clay/10 text-primary-clay px-2 py-1 rounded font-mono">Row: {diagnosisResult.source_row_index ?? 'Live'}</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 text-xs font-mono text-primary-ink/70">
+                                                    <div className="flex justify-between pr-4"><span>RPM:</span> <span>{Math.round(Number(diagnosisResult.input_features.rpm))}</span></div>
+                                                    <div className="flex justify-between pl-4"><span>Oil P:</span> <span>{Number(diagnosisResult.input_features.oil_pressure).toFixed(1)}</span></div>
+                                                    <div className="flex justify-between pr-4"><span>Fuel P:</span> <span>{Number(diagnosisResult.input_features.fuel_pressure).toFixed(1)}</span></div>
+                                                    <div className="flex justify-between pl-4"><span>Coolant P:</span> <span>{Number(diagnosisResult.input_features.coolant_pressure).toFixed(1)}</span></div>
+                                                    <div className="flex justify-between pr-4"><span>Oil T:</span> <span>{Math.round(Number(diagnosisResult.input_features.oil_temp))}°</span></div>
+                                                    <div className="flex justify-between pl-4"><span>Coolant T:</span> <span>{Math.round(Number(diagnosisResult.input_features.coolant_temperature))}°</span></div>
                                                 </div>
                                             </div>
                                         )}
@@ -629,59 +693,61 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                             )}
 
                         </div>
-                    </motion.div>
+                    </motion.div >
                 )}
 
                 {/* STEP 4: ACTION CONFIRMED (HUMAN APPROVED) */}
-                {step === STEPS.ACTION && (
-                    <motion.div
-                        key="action"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8"
-                    >
-                        <div className="h-32 w-32 rounded-full bg-functional-success/20 flex items-center justify-center text-functional-success mb-6 shadow-xl shadow-functional-success/10">
-                            <CheckCircle size={64} />
-                        </div>
-                        <div className="max-w-md mx-auto space-y-4">
-                            <H1 className="text-4xl md:text-5xl">Confirmed</H1>
-                            <Body className="text-lg text-functional-stone">
-                                You have approved the repair.
-                            </Body>
-                            <Card className="bg-white p-6 mt-6 mx-auto text-left max-w-sm border-functional-stone/20">
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <Calendar className="text-primary-clay" size={20} />
-                                        <div>
-                                            <div className="text-xs text-functional-stone uppercase tracking-wide">Appointment</div>
-                                            <div className="font-bold text-primary-ink">{schedule.next_slot}</div>
+                {
+                    step === STEPS.ACTION && (
+                        <motion.div
+                            key="action"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8"
+                        >
+                            <div className="h-32 w-32 rounded-full bg-functional-success/20 flex items-center justify-center text-functional-success mb-6 shadow-xl shadow-functional-success/10">
+                                <CheckCircle size={64} />
+                            </div>
+                            <div className="max-w-md mx-auto space-y-4">
+                                <H1 className="text-4xl md:text-5xl">Confirmed</H1>
+                                <Body className="text-lg text-functional-stone">
+                                    You have approved the repair.
+                                </Body>
+                                <Card className="bg-white p-6 mt-6 mx-auto text-left max-w-sm border-functional-stone/20">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            <Calendar className="text-primary-clay" size={20} />
+                                            <div>
+                                                <div className="text-xs text-functional-stone uppercase tracking-wide">Appointment</div>
+                                                <div className="font-bold text-primary-ink">{schedule.next_slot}</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <Wrench className="text-primary-clay" size={20} />
+                                            <div>
+                                                <div className="text-xs text-functional-stone uppercase tracking-wide">Service</div>
+                                                <div className="font-bold text-primary-ink">{repairPlan.action}</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <DollarSign className="text-primary-clay" size={20} />
+                                            <div>
+                                                <div className="text-xs text-functional-stone uppercase tracking-wide">Est. Cost</div>
+                                                <div className="font-bold text-primary-ink">{repairPlan.total_cost}</div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <Wrench className="text-primary-clay" size={20} />
-                                        <div>
-                                            <div className="text-xs text-functional-stone uppercase tracking-wide">Service</div>
-                                            <div className="font-bold text-primary-ink">{repairPlan.action}</div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <DollarSign className="text-primary-clay" size={20} />
-                                        <div>
-                                            <div className="text-xs text-functional-stone uppercase tracking-wide">Est. Cost</div>
-                                            <div className="font-bold text-primary-ink">{repairPlan.total_cost}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Card>
-                        </div>
-                        <Button variant="secondary" className="mt-8 px-8 py-3" onClick={() => setStep(STEPS.MONITOR)}>
-                            Return to Dashboard
-                        </Button>
-                    </motion.div>
-                )}
+                                </Card>
+                            </div>
+                            <Button variant="secondary" className="mt-8 px-8 py-3" onClick={() => setStep(STEPS.MONITOR)}>
+                                Return to Dashboard
+                            </Button>
+                        </motion.div>
+                    )
+                }
 
-            </AnimatePresence>
-        </div>
+            </AnimatePresence >
+        </div >
     );
 };
 
