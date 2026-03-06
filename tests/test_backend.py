@@ -346,7 +346,7 @@ def test_database_history_limit():
     """History should respect the limit parameter."""
     vid = "history_limit_test"
     for i in range(10):
-        database.add_history_record(vid, f"10:0{i}:00", 100.0 - i, i)
+        database.add_history_record(vid, f"10:{i:02d}:00", 100.0 - i, i)
     
     history = database.get_vehicle_history(vid, limit=5)
     assert len(history) == 5

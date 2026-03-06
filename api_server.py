@@ -66,11 +66,7 @@ CORS(app)  # Enable CORS for React frontend
 
 def _map_features_to_api_keys(feature_names):
     """Map ML/SHAP feature names back to API field names for repair rule lookup."""
-    mapped = []
-    for name in feature_names:
-        api_key = REVERSE_FEATURE_MAP.get(name, name)
-        mapped.append(api_key)
-    return mapped
+    return [REVERSE_FEATURE_MAP.get(name, name) for name in feature_names]
 
 @app.route('/health', methods=['GET'])
 def health_check():
