@@ -1,0 +1,19 @@
+{
+    "features": [
+        "Engine rpm",
+        "Lub oil pressure",
+        "Fuel pressure",
+        "Coolant pressure",
+        "lub oil temp",
+        "Coolant temp"
+    ],
+    "target": "Engine Condition",
+    "feature_mapping": {
+        "rpm": "Engine rpm",
+        "oil_pressure": "Lub oil pressure",
+        "fuel_pressure": "Fuel pressure",
+        "coolant_pressure": "Coolant pressure",
+        "oil_temp": "lub oil temp",
+        "coolant_temperature": "Coolant temp"
+    }
+}

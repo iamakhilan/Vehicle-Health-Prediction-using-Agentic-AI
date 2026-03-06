@@ -1,0 +1,31 @@
+{
+    "coolant_temperature": {
+        "action": "Cooling system service",
+        "parts": [
+            "Coolant",
+            "Thermostat"
+        ],
+        "cost": 2500,
+        "time": "2 hours",
+        "notes": "Coolant temperature anomaly detected"
+    },
+    "oil_pressure": {
+        "action": "Oil system inspection",
+        "parts": [
+            "Oil filter",
+            "Engine oil"
+        ],
+        "cost": 1800,
+        "time": "1.5 hours",
+        "notes": "Possible lubrication issue"
+    },
+    "rpm": {
+        "action": "Engine performance diagnostics",
+        "parts": [
+            "Spark plugs"
+        ],
+        "cost": 1500,
+        "time": "1 hour",
+        "notes": "Engine speed irregularity detected"
+    }
+}
