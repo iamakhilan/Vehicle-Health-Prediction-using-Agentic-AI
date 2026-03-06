@@ -38,9 +38,9 @@
     -webkit-touch-callout: none;
   }
 
-  /* Ensure tap targets meet minimum 44px on mobile */
+  /* Ensure tap targets meet minimum 44px on mobile for standalone interactive elements */
   @media (max-width: 640px) {
-    button, [role="button"], a {
+    button:not([class*="inline"]), [role="button"]:not([class*="inline"]) {
       min-height: 44px;
     }
   }

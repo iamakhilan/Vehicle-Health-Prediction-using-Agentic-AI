@@ -496,7 +496,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                             diagnosisResult.risk_level === 'Medium' ? 'bg-accent-teal/20 text-accent-teal' :
                                                 'bg-functional-success/20 text-functional-success'
                                             }`}>
-                                            Risk: {diagnosisResult.risk_level} {diagnosisResult.failure_probability > 0 && `(${(diagnosisResult.failure_probability * 100).toFixed(0)}%)`}
+                                            Risk Level: {diagnosisResult.risk_level} {diagnosisResult.failure_probability > 0 && `(${(diagnosisResult.failure_probability * 100).toFixed(0)}%)`}
                                         </div>
                                         {diagnosisResult.risk_level === 'High' && (
                                             <div className="mt-2 p-3 sm:p-4 bg-functional-error/10 border-l-4 border-functional-error text-functional-error text-sm sm:text-base md:text-lg font-bold">
@@ -520,7 +520,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                         </div>
 
                                         <div className="mt-4 sm:mt-6">
-                                            <div className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-primary-ink">Safe Distance: <span className="text-accent-indigo">{diagnosisResult.remaining_km} KM</span></div>
+                                            <div className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-primary-ink">Remaining: <span className="text-accent-indigo">{diagnosisResult.remaining_km} KM</span></div>
                                         </div>
                                         <div className="mt-3 sm:mt-4 p-3 sm:p-4 border-2 border-solid border-functional-stone/30 rounded-xl bg-white/50 flex flex-col items-center">
                                             <div className="text-xs sm:text-sm text-functional-stone uppercase tracking-wide mb-2">Trend Analysis</div>
@@ -663,7 +663,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                                     <span className="font-medium text-primary-ink">{repairPlan.labor_cost}</span>
                                                 </div>
                                                 <div className="border-t border-functional-stone/20 my-2 pt-2 flex justify-between font-bold text-base sm:text-lg">
-                                                    <span>Total</span>
+                                                    <span>Est. Total</span>
                                                     <span>{repairPlan.total_cost}</span>
                                                 </div>
                                             </div>
