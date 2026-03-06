@@ -325,16 +325,16 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
     };
 
     return (
-        <div className="w-full max-w-7xl mx-auto px-6 py-10 md:py-20 lg:px-12 min-h-screen">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 md:py-20 lg:px-12 min-h-screen pb-20">
 
             {/* Header */}
-            <div className="mb-12 flex items-center justify-between">
+            <div className="mb-8 sm:mb-12 flex items-center justify-between">
                 <div>
-                    <Caption className="mb-2 block">Vehicle Health System</Caption>
-                    <H2 className="text-3xl md:text-4xl">My Model S</H2>
+                    <Caption className="mb-1 sm:mb-2 block">Vehicle Health System</Caption>
+                    <H2 className="text-2xl sm:text-3xl md:text-4xl">My Model S</H2>
                 </div>
-                <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-secondary-sand border border-functional-stone/30 flex items-center justify-center">
-                    <div className="h-3 w-3 rounded-full bg-functional-success shadow-[0_0_10px_#3D8856]"></div>
+                <div className="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 rounded-full bg-secondary-sand border border-functional-stone/30 flex items-center justify-center">
+                    <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-functional-success shadow-[0_0_10px_#3D8856]"></div>
                 </div>
             </div>
 
@@ -350,41 +350,42 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                         transition={{ duration: 0.4 }}
                         className="space-y-8"
                     >
-                        <Card className="bg-primary-clay text-white p-8 md:p-10">
-                            <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6 gap-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-white/20 rounded-xl">
-                                        <Activity className="text-white h-6 w-6" />
+                        <Card className="bg-primary-clay text-white p-5 sm:p-8 md:p-10">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 sm:mb-6 gap-3 sm:gap-4">
+                                <div className="flex items-center gap-3 sm:gap-4">
+                                    <div className="p-2.5 sm:p-3 bg-white/20 rounded-xl">
+                                        <Activity className="text-white h-5 w-5 sm:h-6 sm:w-6" />
                                     </div>
-                                    <H3 className="text-white text-2xl md:text-3xl">System Active</H3>
+                                    <H3 className="text-white text-xl sm:text-2xl md:text-3xl">System Active</H3>
                                 </div>
-                                <span className="text-white/80 font-medium text-sm md:self-center bg-white/10 px-4 py-2 rounded-full">Real-time Agent Monitoring</span>
+                                <span className="text-white/80 font-medium text-xs sm:text-sm self-start sm:self-center bg-white/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full">Real-time Agent Monitoring</span>
                             </div>
-                            <div className="text-white/80 text-base md:text-lg max-w-2xl">
+                            <div className="text-white/80 text-sm sm:text-base md:text-lg max-w-2xl">
                                 Agent 0 is analyzing 142 vehicle sensors stream for anomalies.
                             </div>
                         </Card>
 
                         <div>
-                            <Caption className="mb-6 block text-lg">Live Telemetry (Updated dynamically)</Caption>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <Caption className="mb-4 sm:mb-6 block text-base sm:text-lg">Live Telemetry (Updated dynamically)</Caption>
+                            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
                                 {sensorCards.map((sensor) => (
-                                    <Card key={sensor.id} className="flex flex-col justify-between p-6 bg-white/50 h-full hover:bg-white transition-colors duration-200">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`p-2.5 rounded-xl ${sensor.status === 'error' ? 'bg-functional-error/10 text-functional-error' :
+                                    <Card key={sensor.id} className="flex flex-col justify-between p-4 sm:p-6 bg-white/50 h-full hover:bg-white transition-colors duration-200">
+                                        <div className="flex justify-between items-start mb-3 sm:mb-4">
+                                            <div className="flex items-center gap-2 sm:gap-3">
+                                                <div className={`p-2 sm:p-2.5 rounded-xl ${sensor.status === 'error' ? 'bg-functional-error/10 text-functional-error' :
                                                     sensor.status === 'warning' ? 'bg-accent-teal/10 text-accent-teal' :
                                                         'bg-functional-success/10 text-functional-success'
                                                     }`}>
-                                                    <sensor.icon size={22} />
+                                                    <sensor.icon size={18} className="sm:hidden" />
+                                                    <sensor.icon size={22} className="hidden sm:block" />
                                                 </div>
                                                 <div>
-                                                    <div className="font-semibold text-primary-ink text-lg">{sensor.label}</div>
-                                                    <div className="text-sm text-functional-stone">{sensor.unit}</div>
+                                                    <div className="font-semibold text-primary-ink text-sm sm:text-base md:text-lg leading-tight">{sensor.label}</div>
+                                                    <div className="text-xs sm:text-sm text-functional-stone">{sensor.unit}</div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="font-bold font-serif text-2xl self-end">{sensor.value}</div>
+                                        <div className="font-bold font-serif text-lg sm:text-xl md:text-2xl self-end">{sensor.value}</div>
                                     </Card>
                                 ))}
                             </div>
@@ -405,56 +406,57 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 1.02 }}
-                        className="max-w-3xl mx-auto text-center pt-10 md:pt-20"
+                        className="max-w-3xl mx-auto text-center pt-6 sm:pt-10 md:pt-20"
                     >
-                        <div className="relative inline-block mb-8">
+                        <div className="relative inline-block mb-6 sm:mb-8">
                             <div className="absolute inset-0 bg-functional-error/20 rounded-full animate-ping duration-1000"></div>
-                            <div className="relative p-8 bg-functional-error/10 rounded-full text-functional-error">
-                                <AlertTriangle size={64} strokeWidth={1.5} />
+                            <div className="relative p-5 sm:p-8 bg-functional-error/10 rounded-full text-functional-error">
+                                <AlertTriangle size={48} className="sm:hidden" strokeWidth={1.5} />
+                                <AlertTriangle size={64} className="hidden sm:block" strokeWidth={1.5} />
                             </div>
                         </div>
 
-                        <div className="mb-12">
-                            <H1 className="mb-4 text-4xl md:text-5xl">Anomaly Detected</H1>
-                            <Body variant="serif" className="text-functional-stone text-lg md:text-xl max-w-xl mx-auto leading-relaxed">
+                        <div className="mb-8 sm:mb-12">
+                            <H1 className="mb-3 sm:mb-4 text-3xl sm:text-4xl md:text-5xl">Anomaly Detected</H1>
+                            <Body variant="serif" className="text-functional-stone text-base sm:text-lg md:text-xl max-w-xl mx-auto leading-relaxed px-2">
                                 Agent 0 triggered an alert from <span className="font-bold text-primary-ink">CSV Row #{currentRowIndex}</span>. Unusual vibration and temperature patterns detected in the engine block.
                             </Body>
                         </div>
 
-                        <Card className="text-left border-functional-error/30 bg-functional-error/5 p-8 max-w-xl mx-auto shadow-sm">
-                            <H3 className="text-functional-error mb-6 flex items-center gap-2">
-                                <AlertTriangle size={20} />
+                        <Card className="text-left border-functional-error/30 bg-functional-error/5 p-5 sm:p-8 max-w-xl mx-auto shadow-sm">
+                            <H3 className="text-functional-error mb-4 sm:mb-6 flex items-center gap-2 text-sm sm:text-base">
+                                <AlertTriangle size={18} />
                                 Agent 0 Report
                             </H3>
-                            <ul className="space-y-4">
-                                <li className="flex justify-between items-center text-base md:text-lg pb-4 border-b border-functional-error/10">
+                            <ul className="space-y-3 sm:space-y-4">
+                                <li className="flex justify-between items-center text-sm sm:text-base md:text-lg pb-3 sm:pb-4 border-b border-functional-error/10">
                                     <span className="text-functional-stone">Source Row</span>
-                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg font-mono">#{currentRowIndex}</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-2 sm:px-3 py-1 rounded-lg font-mono text-sm sm:text-base">#{currentRowIndex}</span>
                                 </li>
-                                <li className="flex justify-between items-center text-base md:text-lg pb-4 border-b border-functional-error/10">
+                                <li className="flex justify-between items-center text-sm sm:text-base md:text-lg pb-3 sm:pb-4 border-b border-functional-error/10">
                                     <span className="text-functional-stone">Engine Temp</span>
-                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">{anomalousTelemetry ? `${Math.round(anomalousTelemetry.coolant_temperature)}°C` : '--'}</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-2 sm:px-3 py-1 rounded-lg text-sm sm:text-base">{anomalousTelemetry ? `${Math.round(anomalousTelemetry.coolant_temperature)}°C` : '--'}</span>
                                 </li>
-                                <li className="flex justify-between items-center text-base md:text-lg pb-4 border-b border-functional-error/10">
+                                <li className="flex justify-between items-center text-sm sm:text-base md:text-lg pb-3 sm:pb-4 border-b border-functional-error/10">
                                     <span className="text-functional-stone">RPM</span>
-                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">{anomalousTelemetry ? Math.round(anomalousTelemetry.rpm) : '--'}</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-2 sm:px-3 py-1 rounded-lg text-sm sm:text-base">{anomalousTelemetry ? Math.round(anomalousTelemetry.rpm) : '--'}</span>
                                 </li>
-                                <li className="flex justify-between items-center text-base md:text-lg pb-4 border-b border-functional-error/10">
+                                <li className="flex justify-between items-center text-sm sm:text-base md:text-lg pb-3 sm:pb-4 border-b border-functional-error/10">
                                     <span className="text-functional-stone">Oil Pressure</span>
-                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">{anomalousTelemetry ? `${Number(anomalousTelemetry.oil_pressure).toFixed(1)} PSI` : '--'}</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-2 sm:px-3 py-1 rounded-lg text-sm sm:text-base">{anomalousTelemetry ? `${Number(anomalousTelemetry.oil_pressure).toFixed(1)} PSI` : '--'}</span>
                                 </li>
-                                <li className="flex justify-between items-center text-base md:text-lg">
+                                <li className="flex justify-between items-center text-sm sm:text-base md:text-lg">
                                     <span className="text-functional-stone">Fuel Pressure</span>
-                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">{anomalousTelemetry ? `${Number(anomalousTelemetry.fuel_pressure).toFixed(1)} PSI` : '--'}</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-2 sm:px-3 py-1 rounded-lg text-sm sm:text-base">{anomalousTelemetry ? `${Number(anomalousTelemetry.fuel_pressure).toFixed(1)} PSI` : '--'}</span>
                                 </li>
                             </ul>
                         </Card>
 
-                        <div className="pt-12 flex flex-col md:flex-row gap-4 justify-center items-center">
-                            <Button onClick={handleRunDiagnosis} className="w-full md:w-auto px-8 py-3 text-lg h-auto">
+                        <div className="pt-8 sm:pt-12 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-2">
+                            <Button onClick={handleRunDiagnosis} className="w-full sm:w-auto px-6 sm:px-8 py-3 text-base sm:text-lg h-auto">
                                 Run Diagnostics (Agent 1)
                             </Button>
-                            <Button variant="ghost" onClick={() => setStep(STEPS.MONITOR)} className="w-full md:w-auto text-lg h-auto">
+                            <Button variant="ghost" onClick={() => setStep(STEPS.MONITOR)} className="w-full sm:w-auto text-base sm:text-lg h-auto">
                                 Ignore Alert
                             </Button>
                         </div>
@@ -467,9 +469,9 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                         key="diagnosis"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="space-y-8 md:space-y-12 max-w-6xl mx-auto w-full min-h-[60vh]"
+                        className="space-y-6 sm:space-y-8 md:space-y-12 max-w-6xl mx-auto w-full min-h-[60vh]"
                     >
-                        <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-start">
 
                             {/* Left Column: Agent 1 (Diagnosis) */}
                             <AgentStage
@@ -481,31 +483,31 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                             >
                                 <div className="space-y-6">
                                     <div>
-                                        <div className="flex items-center justify-between mb-4">
-                                            <H1 className="text-4xl md:text-5xl text-primary-ink">Health: <span className={diagnosisResult.risk_level === 'High' ? 'text-functional-error' : 'text-accent-teal'}>{diagnosisResult.health_score}%</span></H1>
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2">
+                                            <H1 className="text-3xl sm:text-4xl md:text-5xl text-primary-ink">Health: <span className={diagnosisResult.risk_level === 'High' ? 'text-functional-error' : 'text-accent-teal'}>{diagnosisResult.health_score}%</span></H1>
                                             {diagnosisResult.source_row_index != null && (
-                                                <span className="text-sm font-mono bg-accent-indigo/10 text-accent-indigo px-3 py-1.5 rounded-lg">Row #{diagnosisResult.source_row_index}</span>
+                                                <span className="text-xs sm:text-sm font-mono bg-accent-indigo/10 text-accent-indigo px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg self-start sm:self-auto">Row #{diagnosisResult.source_row_index}</span>
                                             )}
                                         </div>
-                                        <Body className="text-functional-stone text-lg">
+                                        <Body className="text-functional-stone text-sm sm:text-base md:text-lg">
                                             {diagnosisResult.explanation ? `Diagnosis: ${diagnosisResult.explanation}` : "Prediction based on live vehicle telemetry."}
                                         </Body>
-                                        <div className={`mt-4 mb-2 font-bold px-4 py-2 rounded-lg inline-block ${diagnosisResult.risk_level === 'High' ? 'bg-functional-error/20 text-functional-error' :
+                                        <div className={`mt-3 sm:mt-4 mb-2 font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg inline-block text-sm sm:text-base ${diagnosisResult.risk_level === 'High' ? 'bg-functional-error/20 text-functional-error' :
                                             diagnosisResult.risk_level === 'Medium' ? 'bg-accent-teal/20 text-accent-teal' :
                                                 'bg-functional-success/20 text-functional-success'
                                             }`}>
-                                            Risk Badge: {diagnosisResult.risk_level} {diagnosisResult.failure_probability > 0 && `(${(diagnosisResult.failure_probability * 100).toFixed(0)}%)`}
+                                            Risk: {diagnosisResult.risk_level} {diagnosisResult.failure_probability > 0 && `(${(diagnosisResult.failure_probability * 100).toFixed(0)}%)`}
                                         </div>
                                         {diagnosisResult.risk_level === 'High' && (
-                                            <div className="mt-2 p-4 bg-functional-error/10 border-l-4 border-functional-error text-functional-error text-lg font-bold">
+                                            <div className="mt-2 p-3 sm:p-4 bg-functional-error/10 border-l-4 border-functional-error text-functional-error text-sm sm:text-base md:text-lg font-bold">
                                                 Warning: Critical vehicle health degradation detected. Immediate service advised.
                                             </div>
                                         )}
 
                                         {/* ML Failure Probability Chart */}
-                                        <div className="mt-6">
-                                            <Caption className="text-functional-stone/70 mb-2 block">Failure Probability</Caption>
-                                            <div className="h-20 w-full bg-white/50 rounded-xl p-4 border border-solid border-functional-stone/20">
+                                        <div className="mt-4 sm:mt-6">
+                                            <Caption className="text-functional-stone/70 mb-2 block text-xs sm:text-sm">Failure Probability</Caption>
+                                            <div className="h-16 sm:h-20 w-full bg-white/50 rounded-xl p-3 sm:p-4 border border-solid border-functional-stone/20">
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <BarChart data={[{ name: 'Probability', value: diagnosisResult.failure_probability * 100 }]} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
                                                         <XAxis type="number" domain={[0, 100]} hide />
@@ -517,18 +519,18 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                             </div>
                                         </div>
 
-                                        <div className="mt-6">
-                                            <div className="text-2xl font-bold mb-4 text-primary-ink">Remaining Safe Distance: <span className="text-accent-indigo">{diagnosisResult.remaining_km} KM</span></div>
+                                        <div className="mt-4 sm:mt-6">
+                                            <div className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-primary-ink">Safe Distance: <span className="text-accent-indigo">{diagnosisResult.remaining_km} KM</span></div>
                                         </div>
-                                        <div className="mt-4 p-4 border-2 border-solid border-functional-stone/30 rounded-xl bg-white/50 flex flex-col items-center">
-                                            <div className="text-sm text-functional-stone uppercase tracking-wide mb-2">Trend Analysis</div>
+                                        <div className="mt-3 sm:mt-4 p-3 sm:p-4 border-2 border-solid border-functional-stone/30 rounded-xl bg-white/50 flex flex-col items-center">
+                                            <div className="text-xs sm:text-sm text-functional-stone uppercase tracking-wide mb-2">Trend Analysis</div>
                                             <div className="flex items-center gap-3">
                                                 {diagnosisResult.trend === 'Degrading' ? (
-                                                    <div className="text-functional-error flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Degrading (↘)</div>
+                                                    <div className="text-functional-error flex items-center gap-2 font-bold text-base sm:text-lg"><Activity size={20} /> Degrading (↘)</div>
                                                 ) : diagnosisResult.trend === 'Improving' ? (
-                                                    <div className="text-functional-success flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Improving (↗)</div>
+                                                    <div className="text-functional-success flex items-center gap-2 font-bold text-base sm:text-lg"><Activity size={20} /> Improving (↗)</div>
                                                 ) : (
-                                                    <div className="text-accent-teal flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Stable (→)</div>
+                                                    <div className="text-accent-teal flex items-center gap-2 font-bold text-base sm:text-lg"><Activity size={20} /> Stable (→)</div>
                                                 )}
                                             </div>
                                             <div className="mt-2 text-sm text-center text-primary-ink/80 max-w-sm">
@@ -540,14 +542,14 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
 
                                         {/* NEW: VEHICLE HEALTH TIMELINE */}
                                         {healthHistory.length > 0 && (
-                                            <div className="mt-8">
-                                                <Caption className="text-functional-stone/70 mb-4 block">Vehicle Health Timeline</Caption>
-                                                <div className="h-48 w-full bg-white/50 rounded-xl p-4 border border-solid border-functional-stone/20">
+                                            <div className="mt-6 sm:mt-8">
+                                                <Caption className="text-functional-stone/70 mb-3 sm:mb-4 block text-xs sm:text-sm">Vehicle Health Timeline</Caption>
+                                                <div className="h-40 sm:h-48 w-full bg-white/50 rounded-xl p-3 sm:p-4 border border-solid border-functional-stone/20">
                                                     <ResponsiveContainer width="100%" height="100%">
-                                                        <LineChart data={healthHistory} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
+                                                        <LineChart data={healthHistory} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
                                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
-                                                            <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#8C8C8C' }} tickMargin={10} />
-                                                            <YAxis domain={['auto', 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#8C8C8C' }} />
+                                                            <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#8C8C8C' }} tickMargin={8} />
+                                                            <YAxis domain={['auto', 100]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#8C8C8C' }} width={35} />
                                                             <Tooltip
                                                                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                                                 formatter={(value) => [`${value}%`, 'Health']}
@@ -570,17 +572,17 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
 
                                         {/* ML Feature Importance Chart (SHAP) */}
                                         {diagnosisResult.primary_stress_factors.length > 0 && (
-                                            <div className="mt-8">
-                                                <Caption className="text-functional-stone/70 mb-4 block">Primary SHAP Contributors</Caption>
-                                                <div className="h-48 w-full bg-white/50 rounded-xl p-4 border border-solid border-functional-stone/20">
+                                            <div className="mt-6 sm:mt-8">
+                                                <Caption className="text-functional-stone/70 mb-3 sm:mb-4 block text-xs sm:text-sm">Primary SHAP Contributors</Caption>
+                                                <div className="h-40 sm:h-48 w-full bg-white/50 rounded-xl p-3 sm:p-4 border border-solid border-functional-stone/20">
                                                     <ResponsiveContainer width="100%" height="100%">
                                                         <BarChart
                                                             data={diagnosisResult.primary_stress_factors.map((f, i) => ({ name: f, value: diagnosisResult.primary_stress_factors.length - i }))}
                                                             layout="vertical"
-                                                            margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                                                            margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
                                                         >
                                                             <XAxis type="number" hide />
-                                                            <YAxis dataKey="name" type="category" tick={{ fontSize: 12, fill: '#4b5563' }} width={90} axisLine={false} tickLine={false} />
+                                                            <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: '#4b5563' }} width={80} axisLine={false} tickLine={false} />
                                                             <Tooltip cursor={{ fill: 'transparent' }} formatter={() => ['Factor Impact', 'Rank']} />
                                                             <Bar dataKey="value" fill="#4f46e5" radius={[0, 4, 4, 0]} barSize={20} />
                                                         </BarChart>
@@ -591,12 +593,12 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
 
                                         {/* Prediction Trace Panel */}
                                         {diagnosisResult.input_features && (
-                                            <div className="mt-8 border border-functional-stone/20 rounded-xl bg-white/70 p-4">
-                                                <div className="flex justify-between items-center mb-3">
-                                                    <Caption className="text-functional-stone/70">Prediction Trace</Caption>
+                                            <div className="mt-6 sm:mt-8 border border-functional-stone/20 rounded-xl bg-white/70 p-3 sm:p-4">
+                                                <div className="flex justify-between items-center mb-2 sm:mb-3">
+                                                    <Caption className="text-functional-stone/70 text-xs">Prediction Trace</Caption>
                                                     <span className="text-xs bg-primary-clay/10 text-primary-clay px-2 py-1 rounded font-mono">Row: {diagnosisResult.source_row_index ?? 'Live'}</span>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-2 text-xs font-mono text-primary-ink/70">
+                                                <div className="grid grid-cols-2 gap-1.5 sm:gap-2 text-xs font-mono text-primary-ink/70">
                                                     <div className="flex justify-between pr-4"><span>RPM:</span> <span>{Math.round(Number(diagnosisResult.input_features.rpm))}</span></div>
                                                     <div className="flex justify-between pl-4"><span>Oil P:</span> <span>{Number(diagnosisResult.input_features.oil_pressure).toFixed(1)}</span></div>
                                                     <div className="flex justify-between pr-4"><span>Fuel P:</span> <span>{Number(diagnosisResult.input_features.fuel_pressure).toFixed(1)}</span></div>
@@ -608,14 +610,14 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                         )}
                                     </div>
 
-                                    <Card className="bg-white border-accent-indigo/10 shadow-float p-8">
-                                        <div className="mb-6 pb-6 border-b border-functional-mist">
-                                            <div className="mb-4">
-                                                <Caption className="text-functional-stone/70">Primary contributors</Caption>
+                                    <Card className="bg-white border-accent-indigo/10 shadow-float p-5 sm:p-8">
+                                        <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-functional-mist">
+                                            <div className="mb-3 sm:mb-4">
+                                                <Caption className="text-functional-stone/70 text-xs sm:text-sm">Primary contributors</Caption>
                                             </div>
                                             <ul className="list-disc pl-5">
                                                 {(diagnosisResult.primary_stress_factors || []).map((factor, idx) => (
-                                                    <li key={idx} className="font-bold text-lg md:text-xl text-primary-ink mb-3">{factor.replace('_', ' ')}</li>
+                                                    <li key={idx} className="font-bold text-base sm:text-lg md:text-xl text-primary-ink mb-2 sm:mb-3">{factor.replace('_', ' ')}</li>
                                                 ))}
                                             </ul>
                                         </div>
@@ -633,58 +635,59 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                     color="text-primary-clay"
                                     processingText="Calculating costs & checking schedule..."
                                 >
-                                    <div className="space-y-6 md:pt-4">
-                                        <H3 className="text-2xl">Recommended Action</H3>
+                                    <div className="space-y-4 sm:space-y-6 md:pt-4">
+                                        <H3 className="text-xl sm:text-2xl">Recommended Action</H3>
 
                                         {/* Agent 2: Cost & Repair Plan */}
-                                        <Card className="bg-secondary-sand border-0 p-8">
-                                            <div className="flex gap-6 mb-6">
-                                                <div className="h-14 w-14 shrink-0 rounded-2xl bg-primary-clay flex items-center justify-center text-white shadow-lg shadow-primary-clay/20">
-                                                    <Wrench size={28} />
+                                        <Card className="bg-secondary-sand border-0 p-5 sm:p-8">
+                                            <div className="flex gap-4 sm:gap-6 mb-4 sm:mb-6">
+                                                <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-2xl bg-primary-clay flex items-center justify-center text-white shadow-lg shadow-primary-clay/20">
+                                                    <Wrench size={24} className="sm:hidden" />
+                                                    <Wrench size={28} className="hidden sm:block" />
                                                 </div>
-                                                <div>
-                                                    <div className="font-bold text-2xl text-primary-ink mb-1">{repairPlan.action}</div>
-                                                    <Body className="text-functional-stone text-sm">
+                                                <div className="min-w-0">
+                                                    <div className="font-bold text-lg sm:text-xl md:text-2xl text-primary-ink mb-1 break-words">{repairPlan.action}</div>
+                                                    <Body className="text-functional-stone text-xs sm:text-sm">
                                                         Agent 2 Estimate • {repairPlan.estimated_time}
                                                     </Body>
                                                 </div>
                                             </div>
 
-                                            <div className="space-y-3 mb-6 bg-white/50 p-4 rounded-xl border border-white">
-                                                <div className="flex justify-between text-sm">
+                                            <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6 bg-white/50 p-3 sm:p-4 rounded-xl border border-white">
+                                                <div className="flex justify-between text-xs sm:text-sm">
                                                     <span className="text-functional-stone">Parts</span>
                                                     <span className="font-medium text-primary-ink">{repairPlan.parts_cost}</span>
                                                 </div>
-                                                <div className="flex justify-between text-sm">
+                                                <div className="flex justify-between text-xs sm:text-sm">
                                                     <span className="text-functional-stone">Labor ({repairPlan.estimated_time})</span>
                                                     <span className="font-medium text-primary-ink">{repairPlan.labor_cost}</span>
                                                 </div>
-                                                <div className="border-t border-functional-stone/20 my-2 pt-2 flex justify-between font-bold text-lg">
-                                                    <span>Total Estimate</span>
+                                                <div className="border-t border-functional-stone/20 my-2 pt-2 flex justify-between font-bold text-base sm:text-lg">
+                                                    <span>Total</span>
                                                     <span>{repairPlan.total_cost}</span>
                                                 </div>
                                             </div>
 
                                             {/* Agent 3: Schedule */}
-                                            <div className="flex gap-4 items-start bg-accent-teal/10 p-4 rounded-xl mb-6">
-                                                <Calendar className="text-accent-teal shrink-0 mt-1" size={20} />
+                                            <div className="flex gap-3 sm:gap-4 items-start bg-accent-teal/10 p-3 sm:p-4 rounded-xl mb-4 sm:mb-6">
+                                                <Calendar className="text-accent-teal shrink-0 mt-1" size={18} />
                                                 <div>
-                                                    <div className="font-bold text-accent-teal mb-0.5">Agent 3 Found a Slot</div>
-                                                    <div className="text-primary-ink font-medium">{schedule.next_slot}</div>
+                                                    <div className="font-bold text-accent-teal mb-0.5 text-sm sm:text-base">Agent 3 Found a Slot</div>
+                                                    <div className="text-primary-ink font-medium text-sm sm:text-base">{schedule.next_slot}</div>
                                                     <div className="text-xs text-functional-stone mt-1">{schedule.location}</div>
                                                 </div>
                                             </div>
 
-                                            <Body className="text-functional-stone text-sm italic">
+                                            <Body className="text-functional-stone text-xs sm:text-sm italic">
                                                 "I've checked the price list and mechanic availability. This is the earliest slot." — Service Advisor Agent
                                             </Body>
                                         </Card>
 
-                                        <div className="pt-4 flex flex-col gap-4">
-                                            <Button onClick={handleApprove} icon={ArrowRight} className="w-full py-4 text-lg justify-between px-8">
+                                        <div className="pt-3 sm:pt-4 flex flex-col gap-3 sm:gap-4">
+                                            <Button onClick={handleApprove} icon={ArrowRight} className="w-full py-3 sm:py-4 text-base sm:text-lg justify-between px-6 sm:px-8">
                                                 Approve Repair & Schedule
                                             </Button>
-                                            <Button variant="secondary" onClick={() => setStep(STEPS.MONITOR)} className="w-full py-4 text-lg">
+                                            <Button variant="secondary" onClick={() => setStep(STEPS.MONITOR)} className="w-full py-3 sm:py-4 text-base sm:text-lg">
                                                 Decline
                                             </Button>
                                         </div>
@@ -703,43 +706,44 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                             key="action"
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8"
+                            className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6 sm:space-y-8 px-4"
                         >
-                            <div className="h-32 w-32 rounded-full bg-functional-success/20 flex items-center justify-center text-functional-success mb-6 shadow-xl shadow-functional-success/10">
-                                <CheckCircle size={64} />
+                            <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-functional-success/20 flex items-center justify-center text-functional-success mb-4 sm:mb-6 shadow-xl shadow-functional-success/10">
+                                <CheckCircle size={48} className="sm:hidden" />
+                                <CheckCircle size={64} className="hidden sm:block" />
                             </div>
-                            <div className="max-w-md mx-auto space-y-4">
-                                <H1 className="text-4xl md:text-5xl">Confirmed</H1>
-                                <Body className="text-lg text-functional-stone">
+                            <div className="max-w-md mx-auto space-y-3 sm:space-y-4 w-full">
+                                <H1 className="text-3xl sm:text-4xl md:text-5xl">Confirmed</H1>
+                                <Body className="text-base sm:text-lg text-functional-stone">
                                     You have approved the repair.
                                 </Body>
-                                <Card className="bg-white p-6 mt-6 mx-auto text-left max-w-sm border-functional-stone/20">
-                                    <div className="space-y-4">
+                                <Card className="bg-white p-4 sm:p-6 mt-4 sm:mt-6 mx-auto text-left max-w-sm border-functional-stone/20 w-full">
+                                    <div className="space-y-3 sm:space-y-4">
                                         <div className="flex items-center gap-3">
-                                            <Calendar className="text-primary-clay" size={20} />
+                                            <Calendar className="text-primary-clay shrink-0" size={18} />
                                             <div>
                                                 <div className="text-xs text-functional-stone uppercase tracking-wide">Appointment</div>
-                                                <div className="font-bold text-primary-ink">{schedule.next_slot}</div>
+                                                <div className="font-bold text-primary-ink text-sm sm:text-base">{schedule.next_slot}</div>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <Wrench className="text-primary-clay" size={20} />
+                                            <Wrench className="text-primary-clay shrink-0" size={18} />
                                             <div>
                                                 <div className="text-xs text-functional-stone uppercase tracking-wide">Service</div>
-                                                <div className="font-bold text-primary-ink">{repairPlan.action}</div>
+                                                <div className="font-bold text-primary-ink text-sm sm:text-base">{repairPlan.action}</div>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <DollarSign className="text-primary-clay" size={20} />
+                                            <DollarSign className="text-primary-clay shrink-0" size={18} />
                                             <div>
                                                 <div className="text-xs text-functional-stone uppercase tracking-wide">Est. Cost</div>
-                                                <div className="font-bold text-primary-ink">{repairPlan.total_cost}</div>
+                                                <div className="font-bold text-primary-ink text-sm sm:text-base">{repairPlan.total_cost}</div>
                                             </div>
                                         </div>
                                     </div>
                                 </Card>
                             </div>
-                            <Button variant="secondary" className="mt-8 px-8 py-3" onClick={() => setStep(STEPS.MONITOR)}>
+                            <Button variant="secondary" className="mt-6 sm:mt-8 px-6 sm:px-8 py-3" onClick={() => setStep(STEPS.MONITOR)}>
                                 Return to Dashboard
                             </Button>
                         </motion.div>
