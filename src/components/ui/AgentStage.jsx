@@ -1,8 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { Caption } from './Typography';
-import Card from './Card';
 
 const variants = {
     hidden: { opacity: 0, y: 20, scale: 0.95 },
