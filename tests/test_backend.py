@@ -60,6 +60,11 @@ def test_predict_validation(client):
     assert response.status_code == 400
     assert b"Missing required field" in response.data
 
+    # Missing ML fields
+    response = client.post('/predict', json={"vehicle_id": "test_car", "engine_runtime": 50})
+    assert response.status_code == 400
+    assert b"Missing required field" in response.data
+
 def test_estimate_validation(client):
     response = client.post('/estimate', json={"stress_factors": "not_a_list"})
     assert response.status_code == 400

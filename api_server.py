@@ -64,9 +64,9 @@ def predict_health():
     data = request.json or {}
     
     # Validation
-    required_fields = ['vehicle_id']
+    required_fields = ['vehicle_id', 'rpm', 'oil_pressure', 'fuel_pressure', 'coolant_pressure', 'oil_temp', 'coolant_temperature']
     for field in required_fields:
-        if field not in data or not data[field]:
+        if field not in data or data[field] is None or data[field] == "":
             logger.warning(f"/predict validation failed: Missing '{field}'")
             return jsonify({"error": f"Missing required field: '{field}'"}), 400
             
@@ -97,8 +97,19 @@ def predict_health():
         database.update_vehicle_state_ml(vehicle_id, predicted_label, failure_probability)
         
         health_score_proxy = (1.0 - failure_probability) * 100
-        current_time = datetime.now().strftime("%H:%M")
-        database.add_history_record(vehicle_id, current_time, round(health_score_proxy, 1))
+        
+        # Apply EMA smoothing if history exists
+        history = database.get_vehicle_history(vehicle_id)
+        if history and len(history) > 0:
+            last_score = history[-1]['health']
+            alpha = 0.6
+            health_score_proxy = (health_score_proxy * alpha) + (last_score * (1.0 - alpha))
+            
+        current_time = datetime.now().strftime("%H:%M:%S")
+        source_row_index = data.get('source_row_index')
+        database.add_history_record(vehicle_id, current_time, round(health_score_proxy, 1), source_row_index)
+        
+        remaining_km = health_model.estimate_remaining_distance(vehicle_id, health_score_proxy)
         
         response_data = {
             "vehicle_id": vehicle_id,
@@ -108,28 +119,69 @@ def predict_health():
             "explanation": explanation,
             # Legacy fields for API contract
             "health_score": round(health_score_proxy, 1),
-            "remaining_km": "N/A",
+            "remaining_km": remaining_km,
             "trend": "Stable" if predicted_label == 1 else "Degrading",
             "primary_stress_factors": top_features,
-            "stress_index": float(failure_probability)
+            "stress_index": float(failure_probability),
+            "source_row_index": source_row_index,
+            "input_features": {
+                "rpm": data.get("rpm"),
+                "oil_pressure": data.get("oil_pressure"),
+                "fuel_pressure": data.get("fuel_pressure"),
+                "coolant_pressure": data.get("coolant_pressure"),
+                "oil_temp": data.get("oil_temp"),
+                "coolant_temperature": data.get("coolant_temperature")
+            }
         }
-        logger.info(f"ML Prediction successful for {vehicle_id}. Prob: {failure_probability}")
+        logger.info(f"ML Prediction Trace | Row: {source_row_index} | Prob: {failure_probability:.4f} | Label: {predicted_label} | Features: {top_features} | Inputs: {response_data['input_features']}")
         return jsonify(response_data), 200
         
     except Exception as ml_err:
-        logger.warning(f"ML Model failed: {ml_err}. Falling back to rule-based system.")
+        import traceback
+        logger.warning(f"ML Model failed: {ml_err}. Traceback: {traceback.format_exc()}. Falling back to rule-based system.")
         try:
             # Fallback to rule-based logic
             norm_features = feature_engineering.normalize_features(data)
             stress_index = health_model.calculate_stress_index(norm_features)
-            health_score = health_model.process_vehicle_health(vehicle_id, stress_index, engine_runtime)
+            cumulative_health = health_model.process_vehicle_health(vehicle_id, stress_index, engine_runtime)
+            
+            # Compute an instantaneous data-driven health from actual telemetry
+            # This makes different CSV rows produce meaningfully different scores
+            rpm = float(data.get('rpm', 800))
+            oil_p = float(data.get('oil_pressure', 3.5))
+            fuel_p = float(data.get('fuel_pressure', 7.0))
+            cool_p = float(data.get('coolant_pressure', 2.0))
+            oil_t = float(data.get('oil_temp', 77.0))
+            cool_t = float(data.get('coolant_temperature', 75.0))
+            
+            # Score each sensor on deviation from normal operating ranges
+            rpm_score = max(0, 1.0 - abs(rpm - 800) / 1200.0)  # normal ~800, penalize high/low
+            oil_score = max(0, 1.0 - abs(oil_p - 3.5) / 3.0)   # normal ~3.5 PSI
+            fuel_score = max(0, 1.0 - abs(fuel_p - 7.0) / 10.0) # normal ~7 PSI
+            cool_p_score = max(0, 1.0 - abs(cool_p - 2.5) / 3.0) # normal ~2.5 PSI
+            oil_t_score = max(0, 1.0 - abs(oil_t - 77.0) / 12.0) # normal ~77°C
+            cool_t_score = max(0, 1.0 - abs(cool_t - 77.0) / 15.0) # normal ~77°C
+            
+            instant_health = (
+                rpm_score * 0.25 + oil_score * 0.15 + fuel_score * 0.15 +
+                cool_p_score * 0.10 + oil_t_score * 0.15 + cool_t_score * 0.20
+            ) * 100
+            
+            # Blend: 60% instantaneous data quality, 40% cumulative degradation
+            health_score = (instant_health * 0.6) + (cumulative_health * 0.4)
+            
             trend = health_model.analyze_trend(vehicle_id)
             remaining_km = health_model.estimate_remaining_distance(vehicle_id, health_score)
             risk_level = health_model.determine_risk_level(health_score)
             primary_stress_factors = explanation_engine.generate_explanations(norm_features)
             
-            current_time = datetime.now().strftime("%H:%M")
-            database.add_history_record(vehicle_id, current_time, round(health_score, 1))
+            current_time = datetime.now().strftime("%H:%M:%S")
+            source_row_index = data.get('source_row_index')
+            database.add_history_record(vehicle_id, current_time, round(health_score, 1), source_row_index)
+            
+            # Use blended score to derive failure probability for UI consistency
+            failure_probability_proxy = round(max(0.0, min(1.0, 1.0 - (health_score / 100.0))), 4)
+            explanation = f"{risk_level.capitalize()} risk — health {health_score:.0f}% from {primary_stress_factors[0].lower() if primary_stress_factors else 'sensor analysis'}."
             
             response_data = {
                 "vehicle_id": vehicle_id,
@@ -138,9 +190,20 @@ def predict_health():
                 "risk_level": risk_level,
                 "trend": trend,
                 "primary_stress_factors": primary_stress_factors,
-                "stress_index": round(stress_index, 3)
+                "stress_index": float(round(stress_index, 3)),
+                "failure_probability": float(failure_probability_proxy),
+                "explanation": explanation,
+                "source_row_index": source_row_index,
+                "input_features": {
+                    "rpm": data.get("rpm"),
+                    "oil_pressure": data.get("oil_pressure"),
+                    "fuel_pressure": data.get("fuel_pressure"),
+                    "coolant_pressure": data.get("coolant_pressure"),
+                    "oil_temp": data.get("oil_temp"),
+                    "coolant_temperature": data.get("coolant_temperature")
+                }
             }
-            logger.info(f"Rule-based fallback successful for {vehicle_id}. Health: {response_data['health_score']}")
+            logger.info(f"Rule-based Prediction Trace | Row: {source_row_index} | Stress: {stress_index:.4f} | Health: {health_score:.1f} | Factors: {primary_stress_factors} | Inputs: {response_data['input_features']}")
             return jsonify(response_data), 200
             
         except Exception as e:
@@ -225,7 +288,13 @@ def get_vehicle_history(vehicle_id):
         return jsonify({"error": "Vehicle ID is required"}), 400
         
     try:
-        history = database.get_vehicle_history(vehicle_id)
+        limit_param = request.args.get('limit', '50')
+        try:
+            limit = max(1, min(200, int(limit_param)))
+        except ValueError:
+            return jsonify({"error": "'limit' must be an integer"}), 400
+
+        history = database.get_vehicle_history(vehicle_id, limit=limit)
         return jsonify(history), 200
     except Exception as e:
         logger.error(f"Error fetching history for {vehicle_id}: {e}")
@@ -257,6 +326,7 @@ def simulated_data():
         
         return jsonify({
             "telemetry": mapped_row,
+            "row_index": safe_index,
             "next_index": next_index
         }), 200
         
