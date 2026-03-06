@@ -28,12 +28,6 @@ def init_db():
             model_version TEXT DEFAULT 'xgboost_v1'
         )
     ''')
-    try:
-        c.execute("ALTER TABLE vehicles ADD COLUMN predicted_label INTEGER")
-        c.execute("ALTER TABLE vehicles ADD COLUMN failure_probability REAL")
-        c.execute("ALTER TABLE vehicles ADD COLUMN model_version TEXT DEFAULT 'xgboost_v1'")
-    except sqlite3.OperationalError:
-        pass
     
     # History table
     c.execute('''

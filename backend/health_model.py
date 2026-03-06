@@ -1,4 +1,3 @@
-import time
 import json
 from backend import database
 
@@ -37,7 +36,7 @@ def process_vehicle_health(vehicle_id, stress_index, engine_runtime=60.0):
         cumulative_decay = state_row['cumulative_decay']
         try:
             stress_history_list = json.loads(state_row['stress_history'])
-        except:
+        except (json.JSONDecodeError, TypeError):
             stress_history_list = []
     
     # Recalibrated Base decay percentage per unit stress (Increased to make degradation more noticeable)
@@ -67,7 +66,7 @@ def analyze_trend(vehicle_id):
         
     try:
         history = json.loads(state_row['stress_history'])
-    except:
+    except (json.JSONDecodeError, TypeError):
         history = []
         
     if len(history) < 2:

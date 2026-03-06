@@ -27,3 +27,14 @@ android/.gradle
 android/app/build
 android/build
 android/local.properties
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# SQLite database (runtime artifact)
+vehicle_health.db
+
+# pytest cache
+.pytest_cache/
