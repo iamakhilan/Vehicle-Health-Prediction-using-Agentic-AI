@@ -1,5 +1,6 @@
 import os
 import logging
+import traceback
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime, timedelta
@@ -11,6 +12,14 @@ from backend import feature_engineering
 from backend import health_model
 from backend import explanation_engine
 from backend import database
+
+# ML model import at module level with safe fallback
+try:
+    from backend.ml_pipeline.predict_model import predict_vehicle_health
+    _ml_available = True
+except Exception:
+    predict_vehicle_health = None
+    _ml_available = False
 
 # Configure structured logging
 logging.basicConfig(
@@ -38,8 +47,30 @@ except Exception as e:
     logger.error(f"Failed to load repair rules: {e}")
     REPAIR_RULES = {}
 
+# Load feature config for reverse mapping (ML feature names -> API field names)
+feature_config_path = Path(__file__).parent / 'backend' / 'ml_pipeline' / 'feature_config.json'
+try:
+    with open(feature_config_path) as f:
+        _feature_config = json.load(f)
+    # Build reverse mapping: dataset feature name -> API field name
+    # e.g. "Engine rpm" -> "rpm", "Coolant temp" -> "coolant_temperature"
+    REVERSE_FEATURE_MAP = {v: k for k, v in _feature_config.get("feature_mapping", {}).items()}
+    logger.info(f"Loaded reverse feature mapping with {len(REVERSE_FEATURE_MAP)} entries")
+except Exception as e:
+    logger.warning(f"Failed to load feature config for reverse mapping: {e}")
+    REVERSE_FEATURE_MAP = {}
+
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
+
+
+def _map_features_to_api_keys(feature_names):
+    """Map ML/SHAP feature names back to API field names for repair rule lookup."""
+    mapped = []
+    for name in feature_names:
+        api_key = REVERSE_FEATURE_MAP.get(name, name)
+        mapped.append(api_key)
+    return mapped
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -81,18 +112,22 @@ def predict_health():
     
     try:
         # Phase 4 & 8: ML prediction with fallback
-        from backend.ml_pipeline.predict_model import predict_vehicle_health
+        if not _ml_available:
+            raise RuntimeError("ML model not available")
         
         predicted_label, failure_probability, top_features = predict_vehicle_health(data)
         
         if failure_probability < 0.3:
-            risk_level = "LOW"
+            risk_level = "Low"
         elif failure_probability <= 0.7:
-            risk_level = "MEDIUM"
+            risk_level = "Medium"
         else:
-            risk_level = "HIGH"
+            risk_level = "High"
             
-        explanation = f"{risk_level.capitalize()} risk of engine failure due to abnormal {top_features[0].lower()} and {top_features[1].lower()}."
+        # Map ML feature names to API keys for downstream consumers (/estimate)
+        api_key_factors = _map_features_to_api_keys(top_features)
+        
+        explanation = f"{risk_level} risk of engine failure due to abnormal {top_features[0].lower()} and {top_features[1].lower()}."
         
         database.update_vehicle_state_ml(vehicle_id, predicted_label, failure_probability)
         
@@ -111,6 +146,8 @@ def predict_health():
         
         remaining_km = health_model.estimate_remaining_distance(vehicle_id, health_score_proxy)
         
+        trend = "Stable" if predicted_label == 1 else "Degrading"
+        
         response_data = {
             "vehicle_id": vehicle_id,
             "predicted_label": int(predicted_label),
@@ -120,8 +157,8 @@ def predict_health():
             # Legacy fields for API contract
             "health_score": round(health_score_proxy, 1),
             "remaining_km": remaining_km,
-            "trend": "Stable" if predicted_label == 1 else "Degrading",
-            "primary_stress_factors": top_features,
+            "trend": trend,
+            "primary_stress_factors": api_key_factors,
             "stress_index": float(failure_probability),
             "source_row_index": source_row_index,
             "input_features": {
@@ -133,11 +170,10 @@ def predict_health():
                 "coolant_temperature": data.get("coolant_temperature")
             }
         }
-        logger.info(f"ML Prediction Trace | Row: {source_row_index} | Prob: {failure_probability:.4f} | Label: {predicted_label} | Features: {top_features} | Inputs: {response_data['input_features']}")
+        logger.info(f"ML Prediction Trace | Row: {source_row_index} | Prob: {failure_probability:.4f} | Label: {predicted_label} | Features: {api_key_factors} | Inputs: {response_data['input_features']}")
         return jsonify(response_data), 200
         
     except Exception as ml_err:
-        import traceback
         logger.warning(f"ML Model failed: {ml_err}. Traceback: {traceback.format_exc()}. Falling back to rule-based system.")
         try:
             # Fallback to rule-based logic

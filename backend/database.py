@@ -3,7 +3,20 @@ import json
 import time
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / 'vehicle_health.db'
+_default_db_path = Path(__file__).parent.parent / 'vehicle_health.db'
+DB_PATH = _default_db_path
+
+
+def set_db_path(path):
+    """Override DB path (used for test isolation)."""
+    global DB_PATH
+    DB_PATH = Path(path)
+
+
+def reset_db_path():
+    """Reset DB path to default."""
+    global DB_PATH
+    DB_PATH = _default_db_path
 
 def get_connection():
     # Use isolation_level=None for autocommit

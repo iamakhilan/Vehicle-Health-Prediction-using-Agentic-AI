@@ -441,11 +441,11 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                 </li>
                                 <li className="flex justify-between items-center text-base md:text-lg pb-4 border-b border-functional-error/10">
                                     <span className="text-functional-stone">Oil Pressure</span>
-                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">{anomalousTelemetry ? `${anomalousTelemetry.oil_pressure.toFixed(1)} PSI` : '--'}</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">{anomalousTelemetry ? `${Number(anomalousTelemetry.oil_pressure).toFixed(1)} PSI` : '--'}</span>
                                 </li>
                                 <li className="flex justify-between items-center text-base md:text-lg">
                                     <span className="text-functional-stone">Fuel Pressure</span>
-                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">{anomalousTelemetry ? `${anomalousTelemetry.fuel_pressure.toFixed(1)} PSI` : '--'}</span>
+                                    <span className="font-bold text-primary-ink bg-white/50 px-3 py-1 rounded-lg">{anomalousTelemetry ? `${Number(anomalousTelemetry.fuel_pressure).toFixed(1)} PSI` : '--'}</span>
                                 </li>
                             </ul>
                         </Card>
@@ -482,7 +482,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                 <div className="space-y-6">
                                     <div>
                                         <div className="flex items-center justify-between mb-4">
-                                            <H1 className="text-4xl md:text-5xl text-primary-ink">Health: <span className={diagnosisResult.risk_level === 'HIGH' || diagnosisResult.risk_level === 'High' ? 'text-functional-error' : 'text-accent-teal'}>{diagnosisResult.health_score}%</span></H1>
+                                            <H1 className="text-4xl md:text-5xl text-primary-ink">Health: <span className={diagnosisResult.risk_level === 'High' ? 'text-functional-error' : 'text-accent-teal'}>{diagnosisResult.health_score}%</span></H1>
                                             {diagnosisResult.source_row_index != null && (
                                                 <span className="text-sm font-mono bg-accent-indigo/10 text-accent-indigo px-3 py-1.5 rounded-lg">Row #{diagnosisResult.source_row_index}</span>
                                             )}
@@ -490,13 +490,13 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                         <Body className="text-functional-stone text-lg">
                                             {diagnosisResult.explanation ? `Diagnosis: ${diagnosisResult.explanation}` : "Prediction based on live vehicle telemetry."}
                                         </Body>
-                                        <div className={`mt-4 mb-2 font-bold px-4 py-2 rounded-lg inline-block ${diagnosisResult.risk_level === 'HIGH' || diagnosisResult.risk_level === 'High' ? 'bg-functional-error/20 text-functional-error' :
-                                            diagnosisResult.risk_level === 'MEDIUM' || diagnosisResult.risk_level === 'Medium' ? 'bg-accent-teal/20 text-accent-teal' :
+                                        <div className={`mt-4 mb-2 font-bold px-4 py-2 rounded-lg inline-block ${diagnosisResult.risk_level === 'High' ? 'bg-functional-error/20 text-functional-error' :
+                                            diagnosisResult.risk_level === 'Medium' ? 'bg-accent-teal/20 text-accent-teal' :
                                                 'bg-functional-success/20 text-functional-success'
                                             }`}>
                                             Risk Badge: {diagnosisResult.risk_level} {diagnosisResult.failure_probability > 0 && `(${(diagnosisResult.failure_probability * 100).toFixed(0)}%)`}
                                         </div>
-                                        {(diagnosisResult.risk_level === 'HIGH' || diagnosisResult.risk_level === 'High') && (
+                                        {diagnosisResult.risk_level === 'High' && (
                                             <div className="mt-2 p-4 bg-functional-error/10 border-l-4 border-functional-error text-functional-error text-lg font-bold">
                                                 Warning: Critical vehicle health degradation detected. Immediate service advised.
                                             </div>
@@ -511,7 +511,7 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                                         <XAxis type="number" domain={[0, 100]} hide />
                                                         <YAxis dataKey="name" type="category" hide />
                                                         <Tooltip formatter={(value) => [`${value.toFixed(1)}%`, 'Probability']} />
-                                                        <Bar dataKey="value" fill={diagnosisResult.risk_level === 'HIGH' ? '#ef4444' : diagnosisResult.risk_level === 'MEDIUM' ? '#f59e0b' : '#10b981'} radius={[0, 4, 4, 0]} />
+                                                        <Bar dataKey="value" fill={diagnosisResult.risk_level === 'High' ? '#ef4444' : diagnosisResult.risk_level === 'Medium' ? '#f59e0b' : '#10b981'} radius={[0, 4, 4, 0]} />
                                                     </BarChart>
                                                 </ResponsiveContainer>
                                             </div>
@@ -523,17 +523,17 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                         <div className="mt-4 p-4 border-2 border-solid border-functional-stone/30 rounded-xl bg-white/50 flex flex-col items-center">
                                             <div className="text-sm text-functional-stone uppercase tracking-wide mb-2">Trend Analysis</div>
                                             <div className="flex items-center gap-3">
-                                                {diagnosisResult.trend === 'deteriorating' || diagnosisResult.trend === 'Degrading' ? (
+                                                {diagnosisResult.trend === 'Degrading' ? (
                                                     <div className="text-functional-error flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Degrading (↘)</div>
-                                                ) : diagnosisResult.trend === 'improving' ? (
+                                                ) : diagnosisResult.trend === 'Improving' ? (
                                                     <div className="text-functional-success flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Improving (↗)</div>
                                                 ) : (
                                                     <div className="text-accent-teal flex items-center gap-2 font-bold text-lg"><Activity size={24} /> Stable (→)</div>
                                                 )}
                                             </div>
                                             <div className="mt-2 text-sm text-center text-primary-ink/80 max-w-sm">
-                                                {diagnosisResult.trend === 'deteriorating' || diagnosisResult.trend === 'Degrading' ? "Health is dropping faster than the historical baseline due to sustained stress."
-                                                    : diagnosisResult.trend === 'improving' ? "Recent driving patterns are showing less stress on the engine components."
+                                                {diagnosisResult.trend === 'Degrading' ? "Health is dropping faster than the historical baseline due to sustained stress."
+                                                    : diagnosisResult.trend === 'Improving' ? "Recent driving patterns are showing less stress on the engine components."
                                                         : "Degradation is consistent with normal usage constraints."}
                                             </div>
                                         </div>
@@ -597,12 +597,12 @@ const VehicleHealthFlow = ({ initialState = STEPS.MONITOR }) => {
                                                     <span className="text-xs bg-primary-clay/10 text-primary-clay px-2 py-1 rounded font-mono">Row: {diagnosisResult.source_row_index ?? 'Live'}</span>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-2 text-xs font-mono text-primary-ink/70">
-                                                    <div className="flex justify-between pr-4"><span>RPM:</span> <span>{Math.round(diagnosisResult.input_features.rpm)}</span></div>
-                                                    <div className="flex justify-between pl-4"><span>Oil P:</span> <span>{diagnosisResult.input_features.oil_pressure.toFixed(1)}</span></div>
-                                                    <div className="flex justify-between pr-4"><span>Fuel P:</span> <span>{diagnosisResult.input_features.fuel_pressure.toFixed(1)}</span></div>
-                                                    <div className="flex justify-between pl-4"><span>Coolant P:</span> <span>{diagnosisResult.input_features.coolant_pressure.toFixed(1)}</span></div>
-                                                    <div className="flex justify-between pr-4"><span>Oil T:</span> <span>{Math.round(diagnosisResult.input_features.oil_temp)}°</span></div>
-                                                    <div className="flex justify-between pl-4"><span>Coolant T:</span> <span>{Math.round(diagnosisResult.input_features.coolant_temperature)}°</span></div>
+                                                    <div className="flex justify-between pr-4"><span>RPM:</span> <span>{Math.round(Number(diagnosisResult.input_features.rpm))}</span></div>
+                                                    <div className="flex justify-between pl-4"><span>Oil P:</span> <span>{Number(diagnosisResult.input_features.oil_pressure).toFixed(1)}</span></div>
+                                                    <div className="flex justify-between pr-4"><span>Fuel P:</span> <span>{Number(diagnosisResult.input_features.fuel_pressure).toFixed(1)}</span></div>
+                                                    <div className="flex justify-between pl-4"><span>Coolant P:</span> <span>{Number(diagnosisResult.input_features.coolant_pressure).toFixed(1)}</span></div>
+                                                    <div className="flex justify-between pr-4"><span>Oil T:</span> <span>{Math.round(Number(diagnosisResult.input_features.oil_temp))}°</span></div>
+                                                    <div className="flex justify-between pl-4"><span>Coolant T:</span> <span>{Math.round(Number(diagnosisResult.input_features.coolant_temperature))}°</span></div>
                                                 </div>
                                             </div>
                                         )}
