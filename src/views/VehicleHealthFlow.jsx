@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, AlertTriangle, CheckCircle, Thermometer, Zap, Wrench, ArrowRight, Calendar, Clock, DollarSign } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle, Thermometer, Zap, Wrench, ArrowRight, Calendar, DollarSign } from 'lucide-react';
 import { H1, H2, H3, Body, Caption } from '../components/ui/Typography';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
